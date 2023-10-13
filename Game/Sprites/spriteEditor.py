@@ -128,9 +128,10 @@ def drawBG(scr, num):
 
 
 def main():
-    print('Sprite Editor Controls:\nSetup Controls:\nLeft/right arrows: Change board size\nEnter: Start editing\nEditing controls:\nSpace: Change mode (Drawing/Hitbox)\nLeft/right arrows: Change frame\nUp/down arrows: Change pen size\nT: align to top left\nC: Copy frame\nP: Paste frame\nBackspace: Delete frame\nI: Print frame information to console\nS: Save Frame (Must enter file name into terminal if it is a new file\nLeft Mouse: Draw (in draw mode)/Place hitbox coordinate (hitbox mode, must be top left and bottom right coordinate)\nRight mouse: Erase (in draw mode)')
+    print('Sprite Editor Controls:\nSetup Controls:\nLeft/right arrows: Change board size\nEnter: Start editing\nEditing controls:\nSpace: Change mode (Drawing/Hitbox)\nLeft/right arrows: Change frame\nUp/down arrows: Change pen size\nT: align to top left\nC: Copy frame\nP: Paste frame\nBackspace: Delete frame\nI: Print frame information to console\nF: Flip current frame\nS: Save Frame (Must enter file name into terminal if it is a new file)\nR: Reset save directory\nLeft Mouse: Draw (in draw mode)/Place hitbox coordinate (hitbox mode, must be top left and bottom right coordinate)\nRight mouse: Erase (in draw mode)')
     running = True
     startup = True
+    reset = False
     num = 3
     frames = []
     currentFrame = 0
@@ -164,6 +165,7 @@ def main():
             startup = False
     pygame.init()
     screen = pygame.display.set_mode([512, 512])
+    pygame.display.set_caption('Sprite Editor')
     hitCount = 0
     realX = 0
     realY = 0
@@ -233,7 +235,14 @@ def main():
                     hitbox = []
                 if event.key == pygame.K_i and not startup:
                     print('Frame: {}/{}\nPen Size: {}'.format(currentFrame + 1, finalFrame + 1, penSize))
-                if event.key == pygame.K_s and not startup:
+                if event.key == pygame.K_f and not startup:
+                    for i in board:
+                        i.reverse()
+                if event.key == pygame.K_r and not startup:
+                    if path != 'noPath':
+                        path = 'noPath'
+                        reset = True
+                if (event.key == pygame.K_s and not startup) or reset:
                     if len(frames) == currentFrame and currentFrame == finalFrame:
                         frames.append(translate(board))
                     else:
@@ -247,6 +256,7 @@ def main():
                         for i in frames:
                             file.write('\n{}'.format(i))
                     print('Saved')
+                    reset = False
                 if event.key == pygame.K_SPACE and not startup:
                     if mode == 'draw':
                         mode = 'hitbox'
