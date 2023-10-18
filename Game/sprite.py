@@ -66,6 +66,15 @@ class Sprite:
         self.x += x
         self.y += y
 
+    def getPos(self):
+        return [self.x, self.y]
+
+    def getPing(self):
+        return self.pingRange
+
+    def getHitbox(self):
+        return self.hitbox
+
     def draw(self):
         xRow = 0
         yRow = 0
@@ -119,8 +128,6 @@ class Text:
 
     def __init__(self, t, x, y, c, s, scr):
         self.text = t.lower()
-        self.x = x
-        self.y = y
         self.sprites = []
         sprCount = 0
         xRow = 0
@@ -130,11 +137,83 @@ class Text:
                 yRow += 1
                 xRow = 0
             elif dict.find(i) > -1:
-                self.sprites.append(Sprite('null', self.x + (blocks * xRow * s), self.y + 2 * yRow * s + (blocks * yRow * s), c, -1, s, scr))
+                self.sprites.append(Sprite('null', x + (blocks * xRow * s), y + 2 * yRow * s + (blocks * yRow * s), c, -1, s, scr))
                 self.sprites[sprCount].manualSprite(blocks, hitbox, [chars[dict.find(i)]])
                 xRow += 1
                 sprCount += 1
 
+    def updatePos(self, x, y):
+        for i in self.sprites:
+            i.updatePos(x, y)
+
+    def updateColor(self, c):
+        for i in self.sprites:
+            i.updateColor(c)
+
     def update(self):
         for i in self.sprites:
             i.draw()
+
+class ColorSprite:
+
+    def __init__(self, p, x, y, c, a, s, scr):
+        self.sprites = []
+        temp = []
+        p = 'Sprites\\' + p
+        for i in c:
+            self.sprites.append(Sprite('null', x, y, i, a, s, scr))
+            temp.append([])
+        sprConst = len(temp)
+        sprCount = 0
+        with open(p, 'r') as file:
+            lines = file.readlines()
+            lineCount = 0
+            for line in lines:
+                if lineCount == 0:
+                    ping = ast.literal_eval(line)
+                    lineCount += 1
+                elif lineCount == 1:
+                    hitbox = ast.literal_eval(line)
+                    lineCount += 1
+                else:
+                    temp[sprCount].append(ast.literal_eval(line))
+                    sprCount += 1
+                    if sprCount == sprConst:
+                        sprCount = 0
+        sprCount = 0
+        for i in self.sprites:
+            i.manualSprite(ping, hitbox, temp[sprCount])
+            if sprCount == 0:
+                hitbox = []
+            sprCount += 1
+
+    def update(self):
+        for i in self.sprites:
+            i.draw()
+
+    def updatePos(self, x, y):
+        for i in self.sprites:
+            i.updatePos(x, y)
+
+    def move(self, x, y):
+        for i in self.sprites:
+            i.move(x, y)
+
+    def updateColor(self, c):
+        count = 0
+        for i in self.sprites:
+            i.updateColor(c[count])
+            count += 1
+
+    def updateFrame(self, x):
+        for i in self.sprites:
+            i.updateFrame(x)
+
+    def getPos(self):
+        return self.sprites[0].getPos()
+
+    def getPing(self):
+        return self.sprites[0].getPing()
+
+    def getHitbox(self):
+        return self.sprites[0].getHitbox()
