@@ -75,6 +75,8 @@ class Sprite:
     def getHitbox(self):
         return self.hitbox
 
+    def getScale(self):
+        return self.scale
     def draw(self):
         xRow = 0
         yRow = 0
@@ -160,6 +162,7 @@ class ColorSprite:
         self.sprites = []
         temp = []
         p = 'Sprites\\' + p
+        self.path = p
         for i in c:
             self.sprites.append(Sprite('null', x, y, i, a, s, scr))
             temp.append([])
@@ -217,3 +220,6 @@ class ColorSprite:
 
     def getHitbox(self):
         return self.sprites[0].getHitbox()
+
+    def getScale(self):
+        return self.sprites[0].getScale()
