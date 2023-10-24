@@ -296,11 +296,13 @@ def main():
             if mouse_buttons[0] and mode == 'draw':
                 for i in range(penSize):
                     for j in range(penSize):
-                        board[realY + i][realX + j] = True
+                        if realX + j < blocks and realY + i < blocks:
+                            board[realY + i][realX + j] = True
             elif mouse_buttons[2] and mode == 'draw':
                 for i in range(penSize):
                     for j in range(penSize):
-                        board[realY + i][realX + j] = False
+                        if realX + j < blocks and realY + i < blocks:
+                            board[realY + i][realX + j] = False
         drawBoard(screen, board, blocks)
         if mode == 'hitbox':
             drawHitbox(hitbox, screen, blocks)
