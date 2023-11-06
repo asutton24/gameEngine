@@ -14,17 +14,15 @@ def main():
         breakable = bool(input('Is the object breakable (T/F)? '))
         health = int(input('How much health does it have? '))
         purpose = input('Any special purpose for this tile (type Normal for none)? ')
-        roomC = input('Follow room Color (T/F)? ')
         with open('Manifest\\TileManifest.txt', 'w') as file:
-            file.write(str([path, color, animated, scale, solid, breakable, health, purpose, roomC]))
+            file.write(str([path, color, animated, scale, solid, breakable, health, purpose]))
     if inp == 'i':
         purpose = input('Any special purpose for this item (type Normal for none)? ')
         amount = int(input('Enter an amount associated with this item: '))
         boost = bool(input('Does this item provide a boost of any kind (T/F)? '))
-        iType = input('What type of item is it? ')
         stack = bool(input('Is this item stackable?'))
         with open('Manifest\\ItemManifest.txt', 'w') as file:
-            file.write(str([path, color, animated, scale, purpose, amount, boost, iType, stack]))
+            file.write(str([path, color, animated, scale, purpose, amount, boost, stack]))
 
 
 main()

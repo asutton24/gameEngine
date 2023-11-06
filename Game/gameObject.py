@@ -26,6 +26,9 @@ class GameObject:
         if self.health <= 0:
             self.alive = False
 
+    def getPos(self):
+        return self.sprite.getPos()
+
     def changeHealth(self, x):
         self.health += x
         if self.health <= 0:
@@ -75,20 +78,21 @@ class GameObject:
                 yMove = self.yVel
             self.move(xMove, yMove)
             for i in objs:
-                if i.solid and self.collideWith(self, i):
+                if i.solid and i.alive and self.collideWith(self, i):
                     self.move(-1 * xMove, -1 * yMove)
             self.sprite.update()
 
 
 class Player(GameObject):
     def __init__(self, x, y, scr):
-        self.sprites = [Sprite('Player\\playerIdle.txt', x, y, (255,255,255), -1, 4, scr),
-                        Sprite('Player\\playerMoveR.txt', x, y, (255,255,255), 3, 4, scr),
-                        Sprite('Player\\playerMoveL.txt', x, y, (255,255,255), 3, 4, scr),
-                        Sprite('Player\\playerMoveUD.txt', x, y, (255,255,255), 6, 4, scr)]
+        self.sprites = [Sprite('Player\\playerIdle.txt', x, y, (255,255,255), -1, 6, scr),
+                        Sprite('Player\\playerMoveR.txt', x, y, (255,255,255), 3, 6, scr),
+                        Sprite('Player\\playerMoveL.txt', x, y, (255,255,255), 3, 6, scr),
+                        Sprite('Player\\playerMoveUD.txt', x, y, (255,255,255), 6, 6, scr)]
         self.facing = 1
         self.moving = False
         self.newSprite = False
+        self.roomChange = 0
         GameObject.__init__(self, self.sprites[0], False, 100)
 
     def takeInput(self, keys):
@@ -128,6 +132,11 @@ class Player(GameObject):
         if currentFacing != self.facing or currentMove != self.moving:
             self.newSprite = True
 
+    def getRoomChange(self):
+        temp = self.roomChange
+        self.roomChange = 0
+        return temp
+
     def update(self, objs):
         if self.newSprite:
             pos = self.sprite.getPos()
@@ -150,13 +159,22 @@ class Player(GameObject):
                     self.sprite.updateFrame(1)
             self.sprite.updatePos(pos[0], pos[1])
             self.newSprite = False
+        for i in objs:
+            if self.collideWith(self, i):
+                if i.getPurpose() == 'Up':
+                    self.roomChange = 1
+                elif i.getPurpose() == 'Right':
+                    self.roomChange = 2
+                elif i.getPurpose() == 'Down':
+                    self.roomChange = 3
+                elif i.getPurpose() == 'Left':
+                    self.roomChange = 4
         GameObject.update(self, objs)
 
 class Tile(GameObject):
-    def __init__(self, spr, s, b, h, p, c):
+    def __init__(self, spr, s, b, h, p):
         self.breakable = b
         self.purpose = p
-        self.roomColor = c
         GameObject.__init__(self, spr, s, h)
 
     def getPurpose(self):
@@ -170,15 +188,14 @@ class Tile(GameObject):
         GameObject.update(self, [])
 
     def toString(self):
-        return "Tile(Sprite({}, {}, {}, {}, {}, {}, {}), {}, {}, {}, {}, {})".format(self.sprite.path, self.sprite.x, self.sprite.y, self.sprite.color, self.sprite.animated, self.sprite.scale, 'self.screen', self.solid, self.breakable, self.health, self.purpose, self.roomColor)
+        return r"Tile(Sprite('{}', {}, {}, {}, {}, {}, {}), {}, {}, {}, '{}')".format(self.sprite.path, self.sprite.x, self.sprite.y, self.sprite.color, self.sprite.animated, self.sprite.scale, 'self.screen', self.solid, self.breakable, self.health, self.purpose)
 
 class Item(GameObject):
-    def __init__(self, spr, p, b, t, s):
+    def __init__(self, spr, p, b, s):
         self.purpose = p
         self.boost = b
-        self.type = t
         self.stackable = s
-        GameObject.__init__(spr, False, 1)
+        GameObject.__init__(self, spr, False, 1)
 
     def getPurpose(self):
         return self.purpose
@@ -186,11 +203,77 @@ class Item(GameObject):
     def isBoost(self):
         return self.boost
 
-    def getType(self):
-        return self.type
+    def toString(self):
+        return r"Item(Sprite('{}', {}, {}, {}, {}, {}, {}), '{}', {}, {})".format(self.sprite.path, self.sprite.x,
+                                                                                     self.sprite.y, self.sprite.color,
+                                                                                     self.sprite.animated,
+                                                                                     self.sprite.scale, 'self.screen',
+                                                                                     self.purpose, self.boost,
+                                                                                     self.stackable)
 
     def isStackable(self):
         return self.stackable
+
+class Enemy(GameObject):
+    def __init__(self, spr, faceType, moveType, speed, health, drop, damage, proj):
+        self.mType = moveType
+        self.speed = speed
+        self.drop = drop
+        self.damage = damage
+        self.fType = faceType
+        if faceType == 1:
+            self.sprites = 0
+            self.facing = 0
+            GameObject.__init__(self, spr, False, health)
+        else:
+            self.sprites = spr
+            GameObject.__init__(self, spr[0], False, health)
+            if faceType == 2:
+                self.facing = 1
+            if faceType == 3 or faceType == 4:
+                self.facing = 2
+
+    def changeFacing(self, x, y):
+        pos = self.getPos()
+        if y == -1 or self.fType == 1:
+            return
+        if x == self.facing:
+            return self.changeFacing(y, -1)
+        if self.fType == 2:
+            if x == 0 or x == 2:
+                return self.changeFacing(y, -1)
+            elif x == 1:
+                self.changeSprite(self.sprites[0])
+                self.updatePos(pos[0], pos[1])
+            else:
+                self.changeSprite(self.sprites[1])
+                self.updatePos(pos[0], pos[1])
+            self.facing = x
+        if self.fType == 3:
+            if x == 1 or x == 3:
+                return self.changeFacing(y, -1)
+            elif x == 2:
+                self.changeSprite(self.sprites[0])
+                self.updatePos(pos[0], pos[1])
+            else:
+                self.changeSprite(self.sprites[1])
+                self.updatePos(pos[0], pos[1])
+            self.facing = x
+        else:
+            self.changeSprite(self.sprites[(x+2) % 4])
+            self.updatePos(pos[0], pos[1])
+            self.facing = x
+
+
+    def update(self, player, objs):
+        if self.mType == 0:
+            GameObject.update(self, [])
+        elif self.mType == 1:
+            self.setVel(0, 0)
+            playerPos = player.getPos()
+            selfPos = self.getPos()
+
+
 
 class Inventory:
     def __init__(self, items, m, s):
@@ -211,6 +294,7 @@ class Inventory:
                         i[1] += 1
                     return
             self.inventory.append([item, 1])
+
 
 
 

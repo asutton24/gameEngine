@@ -6,6 +6,7 @@ class Sprite:
     def __init__(self, path, x, y, c, a, s, scr):
         self.x = x
         self.y = y
+        self.path = path
         self.animated = a
         self.frameTick = a
         self.currentFrame = 0
