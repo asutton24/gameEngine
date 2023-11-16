@@ -1,5 +1,5 @@
 import pygame
-
+import random
 from sprite import *
 
 def rectCollide(x1, xlen1, y1, ylen1, x2, xlen2,  y2, ylen2, c):
@@ -12,7 +12,7 @@ def rectCollide(x1, xlen1, y1, ylen1, x2, xlen2,  y2, ylen2, c):
         return temp
 class GameObject:
 
-    def __init__(self,spr, sol, hel):
+    def __init__(self, spr, sol, hel, gho):
         self.sprite = spr
         self.xVel = 0
         self.yVel = 0
@@ -20,6 +20,7 @@ class GameObject:
         self.solid = sol
         self.health = hel
         self.alive = True
+        self.ghost = gho
 
     def setHealth(self, x):
         self.health = x
@@ -76,10 +77,23 @@ class GameObject:
             else:
                 xMove = self.xVel
                 yMove = self.yVel
-            self.move(xMove, yMove)
+            self.move(xMove, 0)
             for i in objs:
                 if i.solid and i.alive and self.collideWith(self, i):
-                    self.move(-1 * xMove, -1 * yMove)
+                    self.move(-1 * xMove, 0)
+            self.move(0, yMove)
+            for i in objs:
+                if i.solid and i.alive and not self.ghost and self.collideWith(self, i):
+                    self.move(0, -1 * yMove)
+            pos = self.getPos()
+            if pos[0] < 0:
+                self.updatePos(0, pos[1])
+            elif pos[0] > 1024 - self.sprite.getScale() * self.sprite.getPing():
+                self.updatePos(1024 - self.sprite.getScale() * self.sprite.getPing(), pos[1])
+            if pos[1] < 0:
+                self.updatePos(self.getPos()[0], 0)
+            elif pos[1] > 576 - self.sprite.getScale() * self.sprite.getPing():
+                self.updatePos(self.getPos()[0], 576 - self.sprite.getScale() * self.sprite.getPing())
             self.sprite.update()
 
 
@@ -93,7 +107,7 @@ class Player(GameObject):
         self.moving = False
         self.newSprite = False
         self.roomChange = 0
-        GameObject.__init__(self, self.sprites[0], False, 100)
+        GameObject.__init__(self, self.sprites[0], False, 100, False)
 
     def takeInput(self, keys):
         currentFacing = self.facing
@@ -175,7 +189,7 @@ class Tile(GameObject):
     def __init__(self, spr, s, b, h, p):
         self.breakable = b
         self.purpose = p
-        GameObject.__init__(self, spr, s, h)
+        GameObject.__init__(self, spr, s, h, False)
 
     def getPurpose(self):
         return self.purpose
@@ -195,7 +209,7 @@ class Item(GameObject):
         self.purpose = p
         self.boost = b
         self.stackable = s
-        GameObject.__init__(self, spr, False, 1)
+        GameObject.__init__(self, spr, False, 1, False)
 
     def getPurpose(self):
         return self.purpose
@@ -215,30 +229,37 @@ class Item(GameObject):
         return self.stackable
 
 class Enemy(GameObject):
-    def __init__(self, spr, faceType, moveType, speed, health, drop, damage, proj):
+    def __init__(self, spr, faceType, moveType, speed, moveLen, gho, health, drop, damage, proj, points):
+        if moveType == 4:
+            self.points = points
+            self.moving = False
+            self.indexCount = 1
         self.mType = moveType
         self.speed = speed
         self.drop = drop
         self.damage = damage
         self.fType = faceType
+        self.currentDir = -1
+        self.avgLen = moveLen
         if faceType == 1:
             self.sprites = 0
             self.facing = 0
-            GameObject.__init__(self, spr, False, health)
+            GameObject.__init__(self, spr, False, health, gho)
         else:
             self.sprites = spr
-            GameObject.__init__(self, spr[0], False, health)
+            GameObject.__init__(self, spr[0], False, health, gho)
             if faceType == 2:
                 self.facing = 1
             if faceType == 3 or faceType == 4:
                 self.facing = 2
 
     def changeFacing(self, x, y):
+        # 0 is downward, increments clockwise
         pos = self.getPos()
-        if y == -1 or self.fType == 1:
+        if x == -1 or self.fType == 1:
             return
         if x == self.facing:
-            return self.changeFacing(y, -1)
+            return
         if self.fType == 2:
             if x == 0 or x == 2:
                 return self.changeFacing(y, -1)
@@ -259,19 +280,171 @@ class Enemy(GameObject):
                 self.changeSprite(self.sprites[1])
                 self.updatePos(pos[0], pos[1])
             self.facing = x
-        else:
+        elif self.fType == 4:
             self.changeSprite(self.sprites[(x+2) % 4])
             self.updatePos(pos[0], pos[1])
             self.facing = x
 
 
     def update(self, player, objs):
+        # 0: Stationary 1: Chase 2: Random move
+        faceDir = []
         if self.mType == 0:
             GameObject.update(self, [])
         elif self.mType == 1:
             self.setVel(0, 0)
             playerPos = player.getPos()
             selfPos = self.getPos()
+            newVel = []
+            if playerPos[0] > selfPos[0]:
+                newVel.append(self.speed)
+                faceDir.append(1)
+            else:
+                newVel.append(-1*self.speed)
+                faceDir.append(3)
+            if playerPos[1] > selfPos[1]:
+                newVel.append(self.speed)
+                faceDir.append(2)
+            else:
+                newVel.append(-1 * self.speed)
+                faceDir.append(0)
+            if abs(playerPos[0]-selfPos[0]) > abs(playerPos[1]-selfPos[1]):
+                self.changeFacing(faceDir[0], faceDir[1])
+            else:
+                self.changeFacing(faceDir[1], faceDir[0])
+            self.setVel(newVel[0], newVel[1])
+            GameObject.update(self, objs)
+        elif self.mType == 2 or self.mType == 3:
+            if self.currentDir == -1:
+                self.currentDir = random.randint(0,3)
+            doChange = random.randint(0,int(self.avgLen/self.speed)-1)
+            if doChange == 0:
+                if self.mType == 3:
+                    if self.getPos()[0] < player.getPos()[0]:
+                        lrBias = 1
+                    else:
+                        lrBias = -1
+                    if self.getPos()[1] < player.getPos()[1]:
+                        udBias = -1
+                    else:
+                        udBias = 1
+                    temp = random.randint(0, 7)
+                    if temp < 4:
+                        self.currentDir = temp
+                    elif temp < 6:
+                        if lrBias == 1:
+                            self.currentDir = 1
+                        else:
+                            self.currentDir = 3
+                    else:
+                        if udBias == 1:
+                            self.currentDir = 0
+                        else:
+                            self.currentDir = 2
+                self.currentDir = random.randint(0, 3)
+            if self.currentDir == 0:
+                self.setVel(0, -1 * self.speed)
+            elif self.currentDir == 1:
+                self.setVel(self.speed, 0)
+            elif self.currentDir == 2:
+                self.setVel(0, self.speed)
+            else:
+                self.setVel(-1 * self.speed, 0)
+            self.changeFacing(self.currentDir, -1)
+            currentPos = self.getPos()
+            GameObject.update(self, objs)
+            if currentPos == self.getPos():
+                self.currentDir = random.randint(0,3)
+        elif self.mType == 4:
+            changeDir = False
+            if not self.moving:
+                if self.getPos()[0] == self.points[self.indexCount][0]:
+                    if self.getPos()[1] < self.points[self.indexCount][1]:
+                        self.currentDir = 2
+                    else:
+                        self.currentDir = 0
+                else:
+                    if self.getPos()[0] < self.points[self.indexCount][0]:
+                        self.currentDir = 1
+                    else:
+                        self.currentDir = 3
+                self.changeFacing(self.currentDir, -1)
+                self.moving = True
+            if self.currentDir == 0:
+                if self.getPos()[1] <= self.points[self.indexCount][1]:
+                    changeDir = True
+                else:
+                    self.setVel(0, -1 * self.speed)
+            elif self.currentDir == 1:
+                if self.getPos()[0] >= self.points[self.indexCount][0]:
+                    changeDir = True
+                else:
+                    self.setVel(self.speed, 0)
+            elif self.currentDir == 2:
+                if self.getPos()[1] >= self.points[self.indexCount][1]:
+                    changeDir = True
+                else:
+                    self.setVel(0, self.speed)
+            elif self.currentDir == 3:
+                if self.getPos()[0] <= self.points[self.indexCount][0]:
+                    changeDir = True
+                else:
+                    self.setVel(-1 * self.speed, 0)
+            if changeDir:
+                self.moving = False
+                self.updatePos(self.points[self.indexCount][0], self.points[self.indexCount][1])
+                self.setVel(0, 0)
+                self.indexCount += 1
+                if self.points[self.indexCount] == 0:
+                    self.indexCount = 0
+                elif self.points[self.indexCount] == 1:
+                    self.points.reverse()
+                    del self.points[0]
+                    self.points.append(1)
+                    self.indexCount = 1
+            GameObject.update(self, objs)
+
+class Projectile(GameObject):
+    def __init__(self, spr, t, s, d, g, p):
+        self.lifetime = t
+        self.ticks = 0
+        self.speed = s
+        self.damage = d
+        self.isShooting = False
+        self.isPlayer = p
+        GameObject.__init__(self, spr, False, 1, g)
+
+    def shoot(self, x, y, dir):
+        if not self.isShooting:
+            self.isShooting = True
+            GameObject.updatePos(self, x, y)
+            self.ticks = 0
+            if dir == 0:
+                GameObject.setVel(self, 0, -self.speed)
+            elif dir == 1:
+                GameObject.setVel(self, self.speed, 0)
+            elif dir == 2:
+                GameObject.setVel(self, 0, self.speed)
+            elif dir == 3:
+                GameObject.setVel(self, -self.speed, 0)
+
+    def update(self, objs):
+        if self.isShooting:
+            self.ticks += 1
+            if self.ticks == self.lifetime:
+                self.isShooting = False
+            for i in objs:
+                if self.isPlayer and type(i) == Enemy:
+                    i = 0
+
+
+
+
+
+
+
+
+
 
 
 
