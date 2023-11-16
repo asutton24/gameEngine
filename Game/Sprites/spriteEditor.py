@@ -163,6 +163,7 @@ def main():
             board = openSprite(frames[0], blocks)
             num = int(math.log2(blocks) + 1)
             startup = False
+            file.close()
     pygame.init()
     screen = pygame.display.set_mode([512, 512])
     pygame.display.set_caption('Sprite Editor')
@@ -255,6 +256,7 @@ def main():
                         file.write('{}\n{}'.format(blocks, hitbox))
                         for i in frames:
                             file.write('\n{}'.format(i))
+                        file.close()
                     print('Saved')
                     reset = False
                 if event.key == pygame.K_SPACE and not startup:
