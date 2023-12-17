@@ -1,1 +1,1 @@
-['block.txt', (255, 255, 255), -1, 8, True, True, 100, 'Normal']
+['block.txt', (255, 255, 255), -1, 8, True, False, 100, 'Normal']
