@@ -101,6 +101,11 @@ class GameObject:
             self.move(self.xVel, self.yVel)
             self.sprite.update()
 
+
+    def isEqual(self, obj):
+        return self.sprite.isEqual(obj.sprite) and self.solid == obj.solid and self.iMax == obj.iMax and self.ghost == obj.ghost
+
+
     def update(self, objs):
         if self.alive:
             if self.iFrames > 0:
@@ -251,11 +256,15 @@ class Tile(GameObject):
             return True
         return False
 
+    def isEqual(self, tile):
+        return self.purpose == tile.purpose and self.breakable == tile.breakable and GameObject.isEqual(self, tile)
+
+
     def update(self):
         self.quickUpdate()
 
     def toString(self):
-        return r"Tile(Sprite('{}', {}, {}, {}, {}, {}, {}), {}, {}, {}, '{}')".format(self.sprite.path, self.sprite.x, self.sprite.y, self.sprite.color, self.sprite.animated, self.sprite.scale, 'self.screen', self.solid, self.breakable, self.health, self.purpose)
+        return r"Tile({}, {}, {}, {}, '{}')".format(self.sprite.toString(), self.solid, self.breakable, self.health, self.purpose)
 
 class Item(GameObject):
     def __init__(self, spr, p, b, s):
@@ -274,12 +283,7 @@ class Item(GameObject):
         self.quickUpdate()
 
     def toString(self):
-        return r"Item(Sprite('{}', {}, {}, {}, {}, {}, {}), '{}', {}, {})".format(self.sprite.path, self.sprite.x,
-                                                                                     self.sprite.y, self.sprite.color,
-                                                                                     self.sprite.animated,
-                                                                                     self.sprite.scale, 'self.screen',
-                                                                                     self.purpose, self.boost,
-                                                                                     self.stackable)
+        return r"Item({}, '{}', {}, {})".format(self.sprite.toString(), self.purpose, self.boost, self.stackable)
 
     def isStackable(self):
         return self.stackable
@@ -290,6 +294,8 @@ class Enemy(GameObject):
             self.points = points
             self.moving = False
             self.indexCount = 1
+        else:
+            self.points = []
         self.mType = moveType
         self.speed = speed
         self.drop = drop
@@ -298,7 +304,6 @@ class Enemy(GameObject):
         self.currentDir = -1
         self.avgLen = moveLen
         self.isAttacking = False
-        self.projectiles = []
         self.projStatus = []
         self.projectiles = []
         self.tickClock = 0
@@ -318,12 +323,56 @@ class Enemy(GameObject):
             self.facing = 0
             GameObject.__init__(self, spr, False, health, gho, im)
         else:
-            self.sprites = spr
+            if type(spr[1]) == str:
+                self.sprites = []
+                first = True
+                for i in spr:
+                    if first:
+                        self.sprites.append(i)
+                        first = False
+                    else:
+                        self.sprites.append(Sprite(i, 0, 0, spr[0].color, spr[0].animated, spr[0].scale, spr[0].screen))
+            else:
+                self.sprites = spr
             GameObject.__init__(self, spr[0], False, health, gho, im)
             if faceType == 2:
                 self.facing = 1
             if faceType == 3 or faceType == 4:
                 self.facing = 2
+
+
+    def toString(self):
+        if self.fType == 1:
+            spr = self.sprite.toString()
+        else:
+            allSame = True
+            for i in self.sprites:
+                if self.sprites[0].color != i.color or self.sprites[0].animated != i.animated or self.sprites[0].scale != i.scale:
+                    allSame = False
+                    break
+            if allSame:
+                spr = '[{}, '.format(self.sprites[0].toString())
+                for i in range(len(self.sprites) - 1):
+                    spr += ("'{}'".format(self.sprites[i+1].path))
+                    if i != len(self.sprites) - 2:
+                        spr += ', '
+                    else:
+                        spr += ']'
+            else:
+                spr = '['
+                for i in range(len(self.sprites)):
+                    spr += self.sprites[i].toString()
+                    if i != len(self.sprites) - 1:
+                        spr += ', '
+                    else:
+                        spr += ']'
+        if len(self.projectiles) == 0:
+            projStr = '[]'
+        else:
+            projStr = '[{}, {}, {}, {}]'.format(self.attackType, self.projectiles[0].toString(), len(self.projectiles), self.chance)
+        return "Enemy({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(spr, self.fType, self.mType, self.speed, self.avgLen,
+                                                               self.ghost, self.health, self.drop, self.hitDamage, projStr, self.points, self.iMax)
+
 
     def attack(self, player):
         if not self.isAttacking and self.attackType is not None:
@@ -359,6 +408,8 @@ class Enemy(GameObject):
                         self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], 2)
                     else:
                         self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], 0)
+            elif self.attackType == 6:
+                self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], random.randint(0, 3))
             else:
                 self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], self.attackType)
 
@@ -452,7 +503,8 @@ class Enemy(GameObject):
                             self.currentDir = 0
                         else:
                             self.currentDir = 2
-                self.currentDir = random.randint(0, 3)
+                else:
+                    self.currentDir = random.randint(0, 3)
             if self.currentDir == 0:
                 self.setVel(0, -1 * self.speed)
             elif self.currentDir == 1:
@@ -553,6 +605,8 @@ class Projectile(GameObject):
         self.kill()
 
 
+    def toString(self):
+        return r'Projectile({}, {}, {}, {}, {}, {}, {}, {}, {})'.format(self.sprite.toString(), self.lifetime, self.speed, self.hitDamage, self.ghost, self.isPlayer, self.pierce, self.knockVal, self.knockFrames)
     def manualShoot(self, x, y, xs, ys):
         if not self.isShooting:
             self.isShooting = True
