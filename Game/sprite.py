@@ -32,10 +32,20 @@ class Sprite:
                     else:
                         self.frames.append(ast.literal_eval(line))
 
+
+    def toString(self):
+        return r"Sprite('{}', {}, {}, {}, {}, {}, self.screen)".format(self.path, self.x, self.y, self.color, self.animated, self.scale)
+
+
     def manualSprite(self, p, h, f):
         self.pingRange = p
         self.hitbox = h
         self.frames = f
+
+
+    def isEqual(self, sprite):
+        return self.path == sprite.path and self.animated == sprite.animated and self.color == sprite.color and self.scale == sprite.scale
+
 
     def updateSprite(self, path):
         with open(path, 'r') as file:
@@ -116,7 +126,7 @@ class Text:
     global hitbox
     chars = []
     lineCount = 0
-    dict = 'abcdefghijklmnopqrstuvwxyz 123456789.?!'
+    dict = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!'
     with open('Sprites\\charList.txt', 'r') as file:
         lines = file.readlines()
         for line in lines:
@@ -156,6 +166,36 @@ class Text:
     def update(self):
         for i in self.sprites:
             i.draw()
+
+
+class Counter:
+
+    def __init__(self, num, x, y, c, s, scr):
+        self.text = Text(str(num), x, y, c, s, scr)
+        self.number = num
+        self.x = x
+        self.y = y
+        self.color = c
+        self.scale = s
+        self.screen = scr
+
+    def update(self):
+        self.text.update()
+
+    def updateVal(self):
+        self.text = Text(str(self.number), self.x, self.y, self.color, self.scale, self.screen)
+
+    def inc(self):
+        self.number += 1
+        self.updateVal()
+
+    def add(self, x):
+        self.number += x
+        self.updateVal()
+
+    def set(self, x):
+        self.number = x
+        self.updateVal()
 
 class ColorSprite:
 

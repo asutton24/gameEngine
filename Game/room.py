@@ -104,25 +104,44 @@ def randomLevel(x, y, r):
         print(str)
 
 class Room:
-    def __init__(self, path, index, b, scr):
+    def __init__(self, path, b, scr):
         self.screen = scr
         self.doors = []
-        with open(path, 'r') as file:
+        self.tiles = []
+        with open('Rooms\\' + path, 'r') as file:
             lines = file.readlines()
             counter = 0
             for line in lines:
-                if counter == index:
-                    self.tiles, self.items = eval(line)
-                    break
+                if counter == 0:
+                    tilesI = eval(line)
+                    tilesS = []
+                    for i in range(len(tilesI)):
+                        tilesS.append(tilesI[i].toString())
+                elif counter == 1:
+                    tileC = eval(line)
+                    tileCount = 0
+                    for i in tileC:
+                        self.tiles.append(eval(tilesS[i[0]]))
+                        self.tiles[tileCount].updatePos(i[1], i[2])
+                        tileCount += 1
+                elif counter == 2:
+                    self.items = eval(line)
+                elif counter == 3:
+                    self.enemiesBackup = line
+                    self.enemies = eval(line)
                 counter += 1
         self.background = b
-    def update(self):
+    def update(self, p1):
         self.screen.fill(self.background)
         for i in self.tiles:
             i.update()
         for i in self.items:
             i.update()
+        for i in self.enemies:
+            i.update(p1, self.tiles)
 
+    def resetEnemies(self):
+        self.enemies = eval(self.enemiesBackup)
 
     def setDoors(self, u, d, l, r):
         self.doors = []
@@ -148,4 +167,72 @@ class Room:
 
 
     def returnAll(self):
-        return self.doors + self.tiles + self.items
+        return self.doors + self.tiles + self.items + self.enemies
+
+
+class RoomArray:
+
+    def __init__(self, r, b, s):
+        self.rooms = []
+        self.coords = []
+        self.currentCoords = [0, 0]
+        for i in r:
+            self.rooms.append(Room(i[0], b, s))
+            self.coords.append([i[1], i[2]])
+        self.currentRoom = self.rooms[self.coords.index([0, 0])]
+        for i in range(len(self.rooms)):
+            x = self.coords[i][0]
+            y = self.coords[i][1]
+            u = False
+            d = False
+            l = False
+            r = False
+            if [x, y+1] in self.coords:
+                u = True
+            if [x, y-1] in self.coords:
+                d = True
+            if [x+1, y] in self.coords:
+                r = True
+            if [x-1, y] in self.coords:
+                l = True
+            self.rooms[i].setDoors(u, d, l, r)
+
+    def update(self, player):
+        roomC = player.getRoomChange()
+        if roomC > 0:
+            if roomC == 1:
+                player.move(0, 384)
+            elif roomC == 2:
+                player.move(-832, 0)
+            elif roomC == 3:
+                player.move(0, -384)
+            elif roomC == 4:
+                player.move(832, 0)
+            self.changeRoom(roomC)
+        self.currentRoom.update(player)
+
+
+    def changeRoom(self, x):
+        if x > 4:
+            return
+        if x == 1:
+            index = self.coords.index([self.currentCoords[0], self.currentCoords[1] + 1])
+            if index != -1:
+                self.currentCoords[1] += 1
+        elif x == 2:
+            index = self.coords.index([self.currentCoords[0] + 1, self.currentCoords[1]])
+            if index != -1:
+                self.currentCoords[0] += 1
+        elif x == 3:
+            index = self.coords.index([self.currentCoords[0], self.currentCoords[1] - 1])
+            if index != -1:
+                self.currentCoords[1] -= 1
+        else:
+            index = self.coords.index([self.currentCoords[0] - 1, self.currentCoords[1]])
+            if index != -1:
+                self.currentCoords[0] -= 1
+        self.currentRoom = self.rooms[index]
+        self.currentRoom.resetEnemies()
+
+
+
