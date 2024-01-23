@@ -87,6 +87,8 @@ class GameObject:
         self.knockback = [x, y, z]
 
     def collideWith(self, go1, go2):
+        if not go1.alive or not go2.alive:
+            return False
         if not (rectCollide(go1.sprite.getPos()[0], go1.sprite.getPing() * go1.sprite.getScale(), go1.sprite.getPos()[1], go1.sprite.getPing() * go1.sprite.getScale(), go2.sprite.getPos()[0], go2.sprite.getPing() * go2.sprite.getScale(), go2.sprite.getPos()[1], go2.sprite.getPing() * go2.sprite.getScale(), 0)):
             return False
         else:
@@ -149,6 +151,8 @@ class Player(GameObject):
         self.roomChange = 0
         self.attacking = False
         self.weapons = []
+        self.maxHealth = 100
+        self.inventory = Inventory([], 0)
         GameObject.__init__(self, self.sprites[0], False, 100, False, 30)
 
     def takeInput(self, keys):
@@ -227,16 +231,28 @@ class Player(GameObject):
                     self.sprite.updateFrame(1)
             self.sprite.updatePos(pos[0], pos[1])
             self.newSprite = False
+        self.move(self.xVel, self.yVel)
+        locked = False
         for i in objs:
             if type(i) == Tile and self.collideWith(self, i):
-                if i.getPurpose() == 'Up':
+                if i.getPurpose() == 'Up' and not locked:
                     self.roomChange = 1
-                elif i.getPurpose() == 'Right':
+                elif i.getPurpose() == 'Right' and not locked:
                     self.roomChange = 2
-                elif i.getPurpose() == 'Down':
+                elif i.getPurpose() == 'Down' and not locked:
                     self.roomChange = 3
-                elif i.getPurpose() == 'Left':
+                elif i.getPurpose() == 'Left' and not locked:
                     self.roomChange = 4
+                elif i.getPurpose()[0:3] == 'Key':
+                    if self.inventory.find(i.getPurpose()):
+                        i.kill()
+                        locked = False
+                    else:
+                        locked = True
+            if type(i) == Item and self.collideWith(self, i):
+                self.inventory.addItem(i)
+                i.kill()
+        self.move(-self.xVel, -self.yVel)
         for i in self.weapons:
             i.update(objs)
         GameObject.update(self, objs)
@@ -283,10 +299,16 @@ class Item(GameObject):
         self.quickUpdate()
 
     def toString(self):
-        return r"Item({}, '{}', {}, {})".format(self.sprite.toString(), self.purpose, self.boost, self.stackable)
+        return r"Item({}, '{}', {}, {})".format(self.sprite.toString(), '[{}, {}]'.format(self.purpose[0], self.purpose[1]), self.boost, self.stackable)
 
     def isStackable(self):
         return self.stackable
+
+    def sameItem(self, item):
+        return self.purpose == item.purpose
+
+
+
 
 class Enemy(GameObject):
     def __init__(self, spr, faceType, moveType, speed, moveLen, gho, health, drop, damage, proj, points, im):
@@ -667,23 +689,11 @@ class Projectile(GameObject):
             self.quickUpdate()
 
 
-
-
-
-
-
-
-
-
-
-
-
 class Inventory:
-    def __init__(self, items, m, s):
+    def __init__(self, items, m):
         self.inventory = items
         self.boosts = []
         self.money = m
-        self.secondary = s
 
     def addItem(self, item):
         if item.getPurpose()[0] == 'Money':
@@ -691,12 +701,35 @@ class Inventory:
         elif item.isBoost():
             self.boosts.append(item)
         else:
+            found = False
             for i in self.inventory:
-                if i[0] == item:
+                if i[0].sameItem(item):
+                    found = True
                     if item.isStackable():
                         i[1] += 1
                     return
-            self.inventory.append([item, 1])
+            if not found:
+                self.inventory.append([item, 1])
+
+
+    def findAndRemove(self, s):
+        for i in self.inventory:
+            if i[0].getPurpose() == s:
+                i[1] -= 1
+                if i[1] == 0:
+                    del i
+                return True
+        return False
+
+    def find(self, s):
+        for i in self.inventory:
+            if i[0].getPurpose()[0] == s:
+                return True
+        return False
+
+    def showItems(self):
+        for i in self.inventory:
+            print(i[0].toString())
 
 
 

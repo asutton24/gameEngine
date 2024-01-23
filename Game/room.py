@@ -1,5 +1,5 @@
 import ast
-
+import os
 from gameObject import *
 import pygame
 import random
@@ -8,106 +8,30 @@ import math
 def distance(x1, y1, x2, y2):
     return math.sqrt((x2-x1)**2+(y2-y1)**2)
 
-def randomLevel(x, y, r):
-    if r < 3:
-        r = 3
+
+def makeNode(level, x, y, dir, len, branch, special, dep):
+    return 0
+
+
+def randLevel(nodeLen, branchProb, curveProb, specialProb, depreciation):
     level = []
-    mainRooms = []
-    for i in range(y):
+    for i in range(24):
         level.append([])
-        for j in range(x):
-            level[i].append(0)
-    for i in range(r):
-        placed = False
-        while not placed:
-            randX = random.randint(0, x-1)
-            randY = random.randint(0, y-1)
-            if level[randY][randX] == 0:
-                level[randY][randX] = 2
-                placed = True
-                mainRooms.append((randX, randY))
-    connections = []
-    for i in range(len(mainRooms)):
-        first = [[0, 0], 10000]
-        second = [[0, 0], 10000]
-        for j in range(len(mainRooms)):
-            if not ([i, j] in connections or [j, i] in connections) and i != j and distance(mainRooms[i][0], mainRooms[i][1], mainRooms[j][0], mainRooms[j][i]) < second[1]:
-                if distance(mainRooms[i][0], mainRooms[i][1], mainRooms[j][0], mainRooms[j][i]) < first[1]:
-                    first[0] = [mainRooms[j][0], mainRooms[j][1]]
-                    first[1] = distance(mainRooms[i][0], mainRooms[i][1], mainRooms[j][0], mainRooms[j][i])
-                else:
-                    second[0] = [mainRooms[j][0], mainRooms[j][1]]
-                    second[1] = distance(mainRooms[i][0], mainRooms[i][1], mainRooms[j][0], mainRooms[j][i])
-                connections.append([i, j])
-        print(connections)
-        print(second)
-        print(first)
-        if second[1] != 10000:
-            xlen = second[0][0] - mainRooms[i][0]
-            ylen = second[0][1] - mainRooms[i][1]
-            currentX = mainRooms[i][0]
-            currentY = mainRooms[i][1]
-            while xlen != 0 and ylen != 0:
-                randX = random.randint(0,abs(xlen)+1)
-                randY = random.randint(0,abs(ylen)+1)
-                if xlen < 0:
-                    moveDir = -1
-                else:
-                    moveDir = 1
-                for i in range(randX + 1):
-                    if level[currentY][currentX + i * moveDir] != 2:
-                        level[currentY][currentX + i * moveDir] = 1
-                currentX += moveDir * randX
-                xlen -= moveDir * randX
-                if ylen < 0:
-                    moveDir = 1
-                else:
-                    moveDir = -1
-                for i in range(randY+1):
-                    if level[currentY + i * moveDir][currentX] != 2:
-                        level[currentY + i * moveDir][currentX] = 1
-                currentY += moveDir * randY
-                ylen -= moveDir * randY
-        if first[1] != 10000:
-            xlen = first[0][0] - mainRooms[i][0]
-            ylen = first[0][1] - mainRooms[i][1]
-            currentX = mainRooms[i][0]
-            currentY = mainRooms[i][1]
-            while xlen != 0 and ylen != 0:
-                randX = random.randint(0,abs(xlen)+1)
-                randY = random.randint(0,abs(ylen)+1)
-                if xlen < 0:
-                    moveDir = -1
-                else:
-                    moveDir = 1
-                for i in range(randX + 1):
-                    if level[currentY][currentX + i * moveDir] != 2:
-                        level[currentY][currentX + i * moveDir] = 1
-                currentX += moveDir * randX
-                xlen -= moveDir * randX
-                if ylen < 0:
-                    moveDir = 1
-                else:
-                    moveDir = -1
-                for i in range(randY):
-                    if level[currentY + i * moveDir][currentX] != 2:
-                        level[currentY + i * moveDir][currentX] = 1
-                currentY += moveDir * randY
-                ylen -= moveDir * randY
+        for j in range(24):
+            level[i].append('O')
+    startX = 11 + random.randint(0, 1)
+    startY = 11 + random.randint(0, 1)
+    level[startY][startX] = 'S'
 
 
-
-    for i in range(y):
-        str = ''
-        for j in range(x):
-            str += "{} ".format(level[i][j])
-        print(str)
 
 class Room:
-    def __init__(self, path, b, scr):
+    def __init__(self, path, k, b, scr):
         self.screen = scr
         self.doors = []
         self.tiles = []
+        self.key = k
+        self.locks = []
         with open('Rooms\\' + path, 'r') as file:
             lines = file.readlines()
             counter = 0
@@ -133,6 +57,8 @@ class Room:
         self.background = b
     def update(self, p1):
         self.screen.fill(self.background)
+        for i in self.locks:
+            i.update()
         for i in self.tiles:
             i.update()
         for i in self.items:
@@ -166,8 +92,28 @@ class Room:
                 i.kill()
 
 
+    def setLocks(self, u, d, l, r):
+        if u != 0:
+            self.locks.append(Tile(Sprite('door.txt', 448, 0, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+                                      'Key' + str(u)))
+            self.locks.append(Tile(Sprite('door.txt', 512, 0, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+                                      'Key' + str(u)))
+        if d != 0:
+            self.locks.append(Tile(Sprite('door.txt', 448, 512, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+                                      'Key' + str(d)))
+            self.locks.append(Tile(Sprite('door.txt', 512, 512, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+                                      'Key' + str(d)))
+        if l != 0:
+            self.locks.append(Tile(Sprite('door.txt', 0, 256, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+                                   'Key' + str(l)))
+        if r != 0:
+            self.locks.append(Tile(Sprite('door.txt', 960, 256, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+                                   'Key' + str(r)))
+
+
+
     def returnAll(self):
-        return self.doors + self.tiles + self.items + self.enemies
+        return self.locks + self.doors + self.tiles + self.items + self.enemies
 
 
 class RoomArray:
@@ -176,9 +122,14 @@ class RoomArray:
         self.rooms = []
         self.coords = []
         self.currentCoords = [0, 0]
+        lockedRooms = []
+        keys = []
         for i in r:
-            self.rooms.append(Room(i[0], b, s))
+            self.rooms.append(Room(i[0], i[3], b, s))
             self.coords.append([i[1], i[2]])
+            if i[3] > 0:
+                lockedRooms.append([i[1], i[2]])
+                keys.append(i[3])
         self.currentRoom = self.rooms[self.coords.index([0, 0])]
         for i in range(len(self.rooms)):
             x = self.coords[i][0]
@@ -187,15 +138,33 @@ class RoomArray:
             d = False
             l = False
             r = False
+            u1 = 0
+            d1 = 0
+            l1 = 0
+            r1 = 0
             if [x, y+1] in self.coords:
                 u = True
+                if [x, y+1] in lockedRooms:
+                    u1 = keys[lockedRooms.index([x, y+1])]
             if [x, y-1] in self.coords:
                 d = True
+                if [x, y-1] in lockedRooms:
+                    d1 = keys[lockedRooms.index([x, y-1])]
             if [x+1, y] in self.coords:
                 r = True
+                if [x+1, y] in lockedRooms:
+                    r1 = keys[lockedRooms.index([x+1, y])]
             if [x-1, y] in self.coords:
                 l = True
+                if [x-1, y] in lockedRooms:
+                    l1 = keys[lockedRooms.index([x-1, y])]
             self.rooms[i].setDoors(u, d, l, r)
+            self.rooms[i].setLocks(u1, d1, l1, r1)
+
+
+    def addRoom(self, r):
+        self.rooms.append(r)
+
 
     def update(self, player):
         roomC = player.getRoomChange()
@@ -203,9 +172,9 @@ class RoomArray:
             if roomC == 1:
                 player.move(0, 384)
             elif roomC == 2:
-                player.move(-832, 0)
+                player.move(-860, 0)
             elif roomC == 3:
-                player.move(0, -384)
+                player.move(0, -400)
             elif roomC == 4:
                 player.move(832, 0)
             self.changeRoom(roomC)
@@ -235,4 +204,63 @@ class RoomArray:
         self.currentRoom.resetEnemies()
 
 
+class Level:
 
+    def __init__(self, l, p, c, d, b, s):
+        self.path = 'Rooms\\' + p
+        self.rooms = os.listdir(self.path)
+        self.rooms.remove('Specials')
+        self.specialRooms = os.listdir(self.path + '\\Specials')
+        self.specialRooms.remove('Start.txt')
+        self.specialRooms.remove('Exit.txt')
+        self.specialRooms.remove('ExitKeyRoom.txt')
+        with open('Levels\\' + l, 'r') as file:
+            lines = file.readlines()
+            layout = lines[random.randint(0, len(lines)-1)]
+            file.close()
+        xOff, yOff = layout.index('S') % 24, int(layout.index('S') / 24)
+        roomList = []
+        specials = []
+        roomList.append([p + '\\Specials\\Start.txt', 0, 0, 0])
+        x = 0
+        y = 0
+        for i in layout:
+            if i == 'N':
+                roomList.append([self.randRoom(), x - xOff, y-yOff, 0])
+            if i == 'U':
+                specials.append([x - xOff, y - yOff])
+            x += 1
+            if x == 24:
+                y += 1
+                x = 0
+        temp = specials.pop(random.randint(0, len(specials)-1))
+        roomList.append([p +'\\Specials\\ExitKeyRoom.txt', temp[0], temp[1], 0])
+        temp = specials.pop(random.randint(0, len(specials) - 1))
+        roomList.append([p + '\\Specials\\Exit.txt', temp[0], temp[1], 1])
+        while len(specials) > 0 and random.random() < c:
+            temp = specials.pop(random.randint(0, len(specials) - 1))
+            roomList.append([p +'\\Specials\\' + self.randSpecialRoom(), temp[0], temp[1], 0])
+            c *= d
+        while len(specials) > 0:
+            temp = specials.pop(0)
+            roomList.append([self.randRoom(), temp[0], temp[1], 0])
+        self.roomArr = RoomArray(roomList, b, s)
+
+
+    def randRoom(self):
+        return self.rooms[random.randint(0, len(self.rooms)-1)]
+
+
+    def randSpecialRoom(self):
+        return self.specialRooms[random.randint(0, len(self.specialRooms)-1)]
+
+
+    def seeRooms(self):
+        print(self.rooms)
+
+
+    def getCoords(self):
+        return self.roomArr.coords
+
+    def update(self, player):
+        self.roomArr.update(player)
