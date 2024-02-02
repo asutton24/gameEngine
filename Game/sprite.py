@@ -126,7 +126,7 @@ class Text:
     global hitbox
     chars = []
     lineCount = 0
-    dict = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!'
+    dict = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!|'
     with open('Sprites\\charList.txt', 'r') as file:
         lines = file.readlines()
         for line in lines:
