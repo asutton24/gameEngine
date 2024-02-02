@@ -103,10 +103,8 @@ class GameObject:
             self.move(self.xVel, self.yVel)
             self.sprite.update()
 
-
     def isEqual(self, obj):
         return self.sprite.isEqual(obj.sprite) and self.solid == obj.solid and self.iMax == obj.iMax and self.ghost == obj.ghost
-
 
     def update(self, objs):
         if self.alive:
@@ -146,30 +144,47 @@ class Player(GameObject):
                         Sprite('Player\\playerMoveL.txt', x, y, (255,255,255), 3, 6, scr),
                         Sprite('Player\\playerMoveUD.txt', x, y, (255,255,255), 6, 6, scr)]
         self.facing = 1
+        self.shootDir = 0
         self.moving = False
         self.newSprite = False
         self.roomChange = 0
         self.attacking = False
         self.weapons = []
         self.maxHealth = 100
+        self.exitRoom = False
         self.inventory = Inventory([], 0)
+        self.currentRoom = [0, 0]
+        self.map = [[0, 0]]
+        self.wasd = False
         GameObject.__init__(self, self.sprites[0], False, 100, False, 30)
 
     def takeInput(self, keys):
         currentFacing = self.facing
         currentMove = self.moving
-        if keys[pygame.K_z]:
+        if not self.wasd:
+            right = pygame.K_RIGHT
+            left = pygame.K_LEFT
+            up = pygame.K_UP
+            down = pygame.K_DOWN
+            fire = pygame.K_z
+        else:
+            right = pygame.K_d
+            left = pygame.K_a
+            up = pygame.K_w
+            down = pygame.K_s
+            fire = pygame.K_k
+        if keys[fire]:
             self.attack()
-        if (keys[pygame.K_RIGHT] and keys[pygame.K_LEFT]) or (keys[pygame.K_UP] and keys[pygame.K_DOWN]):
+        if (keys[right] and keys[left]) or (keys[up] and keys[down]):
             return
         horiMove = False
-        if keys[pygame.K_RIGHT] and not keys[pygame.K_LEFT]:
+        if keys[right] and not keys[left]:
             self.xVel = 3
             if not currentMove or self.yVel == 0:
                 self.facing = 1
             horiMove = True
             self.moving = True
-        elif not keys[pygame.K_RIGHT] and keys[pygame.K_LEFT]:
+        elif not keys[right] and keys[left]:
             self.xVel = -3
             if not currentMove or self.yVel == 0:
                 self.facing = 3
@@ -179,18 +194,28 @@ class Player(GameObject):
             self.xVel = 0
             horiMove = False
             self.moving = False
-        if keys[pygame.K_UP] and not keys[pygame.K_DOWN]:
+        if keys[up] and not keys[down]:
             if not horiMove:
                 self.facing = 0
                 self.moving = True
             self.yVel = -3
-        elif not keys[pygame.K_UP] and keys[pygame.K_DOWN]:
+        elif not keys[up] and keys[down]:
             if not horiMove:
                 self.facing = 2
                 self.moving = True
             self.yVel = 3
         else:
             self.yVel = 0
+        if keys[up] and keys[right]:
+            self.shootDir = 4
+        elif keys[down] and keys[right]:
+            self.shootDir = 5
+        elif keys[down] and keys[left]:
+            self.shootDir = 6
+        elif keys[up] and keys[left]:
+            self.shootDir = 7
+        else:
+            self.shootDir = self.facing
         if currentFacing != self.facing or currentMove != self.moving:
             self.newSprite = True
 
@@ -203,11 +228,36 @@ class Player(GameObject):
         self.weapons.append(x)
 
     def attack(self):
-        x = self.getPos()[0]
-        y = self.getPos()[1]
+        x = self.getCenter()[0]
+        y = self.getCenter()[1]
         for weapon in self.weapons:
-            weapon.shoot(x, y, self.facing)
+            weapon.shoot(x, y, self.shootDir)
 
+    def resetMap(self):
+        self.map = [[0,0]]
+        self.currentRoom = [0, 0]
+
+    def drawHealthBar(self, x, y, scr):
+        pygame.draw.rect(scr, (255, 255, 255), [x, y, 200, 50])
+        pygame.draw.rect(scr, (0, 0, 0), [x + 5, y + 5, 190, 40])
+        pygame.draw.rect(scr, (255, 0, 0), [x+5, y + 5, int(190 * self.health / self.maxHealth), 40])
+        helString = "{}|{}".format(self.health, self.maxHealth)
+        if len(helString) % 2 == 1:
+            start = 100 - 8 - 16 * int(len(helString) / 2)
+        else:
+            start = 100 - 16 * int(len(helString) / 2)
+        t = Text(helString, x + start, y + 9, (255, 255, 255), 2, scr)
+        t.update()
+
+    def drawAutoMap(self, x, y, scr):
+        pygame.draw.rect(scr, (255, 255, 255), [x, y, 110, 110])
+        pygame.draw.rect(scr, (0, 0, 0), [x+5, y+5, 100, 100])
+        for i in self.map:
+            pygame.draw.rect(scr, (255, 255, 255), [(x + 5) + 4 * (i[0] + 12), (y + 5) + 4 * (i[1] + 12), 4, 4])
+        pygame.draw.rect(scr, (255, 0, 0), [(x + 5) + 4 * (self.currentRoom[0] + 12), (y + 5) + 4 * (self.currentRoom[1] + 12), 4, 4])
+
+    def flipWasd(self):
+        self.wasd = not self.wasd
 
     def update(self, objs):
         if self.newSprite:
@@ -237,18 +287,27 @@ class Player(GameObject):
             if type(i) == Tile and self.collideWith(self, i):
                 if i.getPurpose() == 'Up' and not locked:
                     self.roomChange = 1
+                    self.currentRoom[1] -= 1
                 elif i.getPurpose() == 'Right' and not locked:
                     self.roomChange = 2
+                    self.currentRoom[0] += 1
                 elif i.getPurpose() == 'Down' and not locked:
                     self.roomChange = 3
+                    self.currentRoom[1] += 1
                 elif i.getPurpose() == 'Left' and not locked:
                     self.roomChange = 4
+                    self.currentRoom[0] -= 1
                 elif i.getPurpose()[0:3] == 'Key':
                     if self.inventory.find(i.getPurpose()):
                         i.kill()
                         locked = False
                     else:
                         locked = True
+                elif i.getPurpose() == 'Exit':
+                    self.exitRoom = True
+                    self.resetMap()
+                if not (self.currentRoom in self.map):
+                    self.map.append([self.currentRoom[0], self.currentRoom[1]])
             if type(i) == Item and self.collideWith(self, i):
                 self.inventory.addItem(i)
                 i.kill()
@@ -256,6 +315,7 @@ class Player(GameObject):
         for i in self.weapons:
             i.update(objs)
         GameObject.update(self, objs)
+
 
 class Tile(GameObject):
     def __init__(self, spr, s, b, h, p):
@@ -275,12 +335,12 @@ class Tile(GameObject):
     def isEqual(self, tile):
         return self.purpose == tile.purpose and self.breakable == tile.breakable and GameObject.isEqual(self, tile)
 
-
     def update(self):
         self.quickUpdate()
 
     def toString(self):
         return r"Tile({}, {}, {}, {}, '{}')".format(self.sprite.toString(), self.solid, self.breakable, self.health, self.purpose)
+
 
 class Item(GameObject):
     def __init__(self, spr, p, b, s):
@@ -306,8 +366,6 @@ class Item(GameObject):
 
     def sameItem(self, item):
         return self.purpose == item.purpose
-
-
 
 
 class Enemy(GameObject):
@@ -394,7 +452,6 @@ class Enemy(GameObject):
             projStr = '[{}, {}, {}, {}]'.format(self.attackType, self.projectiles[0].toString(), len(self.projectiles), self.chance)
         return "Enemy({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(spr, self.fType, self.mType, self.speed, self.avgLen,
                                                                self.ghost, self.health, self.drop, self.hitDamage, projStr, self.points, self.iMax)
-
 
     def attack(self, player):
         if not self.isAttacking and self.attackType is not None:
@@ -644,6 +701,11 @@ class Projectile(GameObject):
             self.setHealth(1)
             GameObject.updatePos(self, x, y)
             self.ticks = 0
+            dSpeed = 0
+            dKnock = 0
+            if dir > 3:
+                dSpeed = (self.speed * self.speed / 2) ** .5
+                dKnock = (self.knockVal * self.knockVal / 2) ** .5
             if dir == 0:
                 GameObject.setVel(self, 0, -self.speed)
                 self.knock = [0, -self.knockVal]
@@ -656,6 +718,18 @@ class Projectile(GameObject):
             elif dir == 3:
                 GameObject.setVel(self, -self.speed, 0)
                 self.knock = [-self.knockVal, 0]
+            elif dir == 4:
+                GameObject.setVel(self, dSpeed, -dSpeed)
+                self.knock = [dKnock, -dKnock]
+            elif dir == 5:
+                GameObject.setVel(self, dSpeed, dSpeed)
+                self.knock = [dKnock, dKnock]
+            elif dir == 6:
+                GameObject.setVel(self, -dSpeed, dSpeed)
+                self.knock = [-dKnock, dKnock]
+            elif dir == 7:
+                GameObject.setVel(self, -dSpeed, -dSpeed)
+                self.knock = [-dKnock, -dKnock]
 
     def status(self):
         print('Am Shooting: {} Current tick: {} Alive: {}'.format(self.isShooting, self.ticks, self.alive))
@@ -710,7 +784,6 @@ class Inventory:
                     return
             if not found:
                 self.inventory.append([item, 1])
-
 
     def findAndRemove(self, s):
         for i in self.inventory:
