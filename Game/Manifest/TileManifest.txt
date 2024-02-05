@@ -2,3 +2,4 @@
 ['block.txt', (255, 0, 0), -1, 8, True, False, 100, 'Normal']
 ['block.txt', (0, 255, 0), -1, 8, True, False, 100, 'Normal']
 ['block.txt', (0, 0, 255), -1, 8, True, False, 100, 'Normal']
+['exit.txt', (0, 255, 0), 6, 4, False, False, 100, 'Exit']

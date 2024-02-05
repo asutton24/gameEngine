@@ -2,9 +2,12 @@ import pygame
 from room import *
 from gameObject import *
 
+
 def getLevel(x, scr):
     if x == 1:
-        return Level([5, .05, .1, .5, .25, 10, 2], '', 1, .5, (0, 0, 0), scr)
+        return Level([5, .05, .1, .5, .25, 10, 4], '', 1, .5, (0, 0, 0), scr)
+    return 0
+
 
 def run(screen):
     running = True
@@ -46,3 +49,5 @@ def run(screen):
             clock.tick(60)
         currentLevel += 1
         level = getLevel(currentLevel, screen)
+        if currentLevel == 2:
+            running = False
