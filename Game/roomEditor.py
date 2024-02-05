@@ -85,7 +85,7 @@ def main():
                     pointSprites = []
             if event.type == pygame.KEYDOWN and drawMode:
                 if event.key == pygame.K_RIGHT:
-                    if (mode == 't' and index != len(tiles) - 1) or (mode == 'i' and index != len(enemies) - 1) or (mode == 'e' and index != len (enemies) - 1):
+                    if (mode == 't' and index != len(tiles) - 1) or (mode == 'i' and index != len(items) - 1) or (mode == 'e' and index != len(enemies) - 1):
                         index += 1
                 elif event.key == pygame.K_LEFT:
                     if index != 0:
@@ -189,7 +189,6 @@ def main():
                         file.write('{}\n{}\n{}\n{}'.format(tileIndex, saveTiles, saveItems, saveEnemies))
                         file.close()
             elif event.type == pygame.KEYDOWN and not drawMode:
-                print('done')
                 if event.key == pygame.K_l:
                     points.append(0)
                 if event.key == pygame.K_r:

@@ -271,20 +271,20 @@ class Level:
         if str == type(l):
             with open('Levels\\' + l, 'r') as file:
                 lines = file.readlines()
-                layout = lines[random.randint(0, len(lines) - 1)]
+                self.layout = lines[random.randint(0, len(lines) - 1)]
                 file.close()
         else:
-            layout = ''
+            self.layout = ''
             for i in randLevel(l[0], l[1], l[2], l[3], l[4], l[5], l[6]):
                 for j in i:
-                    layout += j
-        xOff, yOff = layout.index('S') % 24, int(layout.index('S') / 24)
+                    self.layout += j
+        xOff, yOff = self.layout.index('S') % 24, int(self.layout.index('S') / 24)
         roomList = []
         specials = []
         roomList.append([p + '\\Specials\\Start.txt', 0, 0, 0])
         x = 0
         y = 0
-        for i in layout:
+        for i in self.layout:
             if i == 'N':
                 roomList.append([self.randRoom(), x - xOff, y - yOff, 0])
             if i == 'U':
@@ -323,8 +323,15 @@ class Level:
 
     def getMap(self):
         ret = []
-        for i in self.roomArr.coords:
-            ret.append([i[0], -1 * i[1]])
+        y = 12
+        x = -12
+        for i in self.layout:
+            if i != 'O':
+                ret.append([x, y])
+            x += 1
+            if x == 13:
+                y -= 1
+                x = -12
         return ret
 
     def returnAll(self):
