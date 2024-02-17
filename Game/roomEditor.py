@@ -3,6 +3,16 @@ import pygame
 from gameObject import *
 from sprite import Text, Counter
 
+
+def newBoard():
+    b = []
+    for i in range(9):
+        b.append([])
+        for j in range(16):
+            b[i].append([])
+    return b
+
+
 def drawBG(scr):
     counter = 0
     for i in range(9):
@@ -21,10 +31,11 @@ def main():
     pygame.init()
     running = True
     screen = pygame.display.set_mode([1152, 576])
+    clock = pygame.time.Clock()
     tiles = []
     enemies = []
     items = []
-    board = []
+    board = newBoard()
     points = []
     pointSprites = []
     drawMode = True
@@ -50,10 +61,7 @@ def main():
         for line in lines:
             enemies.append(ast.literal_eval(line))
         file.close()
-    for i in range(9):
-        board.append([])
-        for j in range(16):
-            board[i].append([])
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -99,6 +107,14 @@ def main():
                 elif event.key == pygame.K_e:
                     mode = 'e'
                     index = 0
+                elif event.key == pygame.K_l:
+                    board = newBoard()
+                    with open('RoomSaves\\' + input('Enter file location: '), 'r') as file:
+                        info = eval(file.readline())
+                        file.close()
+                    for i in info:
+                        coords = i.pop(0)
+                        board[coords[0]][coords[1]] = i
                 elif event.key == pygame.K_f:
                     if mode == 't':
                         for i in range(16):
@@ -114,6 +130,47 @@ def main():
                                 if k[0] == 'e':
                                     print(k)
                 elif event.key == pygame.K_s:
+                    boardInfo = []
+                    yi = 0
+                    xi = 0
+                    currentI = -1
+                    for i in board:
+                        for j in i:
+                            if len(j) > 0:
+                                boardInfo.append([[yi, xi]])
+                                currentI += 1
+                            for k in j:
+                                boardInfo[currentI].append(k)
+                            xi += 1
+                        yi += 1
+                        xi = 0
+                    saveStr = '['
+                    count = 0
+                    mMax = len(boardInfo) - 1
+                    for i in boardInfo:
+                        sCount = 0
+                        maximum = len(i) - 1
+                        saveSub = '['
+                        for j in i:
+                            if sCount == 0:
+                                saveSub += '[{}, {}]'.format(j[0], j[1])
+                            else:
+                                saveSub += "['{}', {}, {}]".format(j[0], j[1], j[2].editorString())
+                            if sCount < maximum:
+                                sCount += 1
+                                saveSub += ', '
+                            else:
+                                saveSub += ']'
+                        saveStr += saveSub
+                        if count < mMax:
+                            count += 1
+                            saveStr += ', '
+                        else:
+                            saveStr += ']'
+                    with open('RoomSaves\\' + input('Enter save location: '), 'w') as file:
+                        file.write(saveStr)
+                        file.close()
+                elif event.key == pygame.K_c:
                     tileTypes = []
                     saveItems = '['
                     saveEnemies = '['
@@ -180,7 +237,7 @@ def main():
                             for k in j:
                                 counter = 0
                                 for t in tileTypes:
-                                    if t.isEqual(Tile(k[2], tiles[k[1]][4], tiles[k[1]][5], tiles[k[1]][6], tiles[k[1]][7])):
+                                    if k[0] == 't' and t.isEqual(Tile(k[2], tiles[k[1]][4], tiles[k[1]][5], tiles[k[1]][6], tiles[k[1]][7])):
                                         saveTiles.append([counter, k[2].x, k[2].y])
                                         break
                                     counter += 1
@@ -239,6 +296,7 @@ def main():
                 i.update()
         frames.inc()
         frames.update()
+        clock.tick(60)
         pygame.display.update()
 
 main()

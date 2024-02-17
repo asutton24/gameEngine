@@ -3,7 +3,7 @@ from gameObject import *
 import pygame
 
 running = True
-p = input('Enter room path')
+p = 'room9.txt'
 screen = pygame.display.set_mode([1024, 720], pygame.FULLSCREEN)
 p1 = Player(70, 250, screen)
 clock = pygame.time.Clock()
@@ -21,5 +21,7 @@ while running:
     p1.update(room.returnAll())
     p1.drawHealthBar(64, 620, screen)
     p1.drawAutoMap(800, 620, screen)
+    p1.drawMoneyCount(400, 620, screen)
+    p1.drawCurrentItem(680, 620, screen)
     pygame.display.update()
     clock.tick(60)

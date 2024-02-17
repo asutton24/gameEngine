@@ -3,6 +3,15 @@ import random
 from sprite import *
 
 
+global itemPool
+itemPool = [[['Items\\\\pmed.spr', (119, 252, 96), -1, 4, 'Heal', 25, False, True],
+['Items\\\\medkit.spr', (119, 252, 96), -1, 8, 'Heal', 50, True, False],
+['Items\\\\hpup.spr', (173, 2, 2), -1, 4, 'HealthB', 25, True, False],
+['Items\\\\speedup.spr', (255, 180, 115), -1, 4, 'SpeedB', .5, True, False],
+['Items\\\\rangeup.spr', (87, 9, 85), -1, 4, 'RangeB', 10, True, False],
+['Items\\\\akimbo.spr', (100, 100, 100), -1, 4, 'ExtraShot', 1, True, False]]]
+
+
 def sign(x):
     if x == 0:
         return 0
@@ -82,6 +91,10 @@ class GameObject:
         self.alive = False
         self.health = 0
 
+    def revive(self):
+        self.alive = True
+        self.health = 1
+
     def changeSprite(self, x):
         self.sprite = x
 
@@ -154,10 +167,10 @@ class GameObject:
 
 class Player(GameObject):
     def __init__(self, x, y, scr):
-        self.sprites = [Sprite('Player\\playerIdle.txt', x, y, (255, 255, 255), -1, 6, scr),
-                        Sprite('Player\\playerMoveR.txt', x, y, (255, 255, 255), 3, 6, scr),
-                        Sprite('Player\\playerMoveL.txt', x, y, (255, 255, 255), 3, 6, scr),
-                        Sprite('Player\\playerMoveUD.txt', x, y, (255, 255, 255), 6, 6, scr)]
+        self.sprites = [Sprite('Player\\playerIdle.spr', x, y, (255, 255, 255), -1, 6, scr),
+                        Sprite('Player\\playerMoveR.spr', x, y, (255, 255, 255), 3, 6, scr),
+                        Sprite('Player\\playerMoveL.spr', x, y, (255, 255, 255), 3, 6, scr),
+                        Sprite('Player\\playerMoveUD.spr', x, y, (255, 255, 255), 6, 6, scr)]
         self.facing = 1
         self.shootDir = 0
         self.moving = False
@@ -176,7 +189,12 @@ class Player(GameObject):
         self.totalDB = 0
         self.healB = 0
         self.speed = 3
+        self.hold = [False, False, 0]
         self.wasd = False
+        self.armor = 1
+        self.itemTimer = 0
+        self.currentItem = ''
+        self.flags = [False, False]
         GameObject.__init__(self, self.sprites[0], False, 100, False, 30)
 
     def takeInput(self, keys):
@@ -188,14 +206,33 @@ class Player(GameObject):
             up = pygame.K_UP
             down = pygame.K_DOWN
             fire = pygame.K_z
+            use = pygame.K_x
+            change = pygame.K_c
         else:
             right = pygame.K_d
             left = pygame.K_a
             up = pygame.K_w
             down = pygame.K_s
             fire = pygame.K_k
-        if keys[fire]:
+            use = pygame.K_l
+            change = pygame.K_SEMICOLON
+        if not keys[use]:
+            self.hold[0] = False
+        if not keys[change]:
+            self.hold[1] = False
+        if not keys[fire]:
+            self.hold[2] = 0
+        if not self.hold[0] and keys[use]:
+            self.useItem(self.inventory.useItem())
+            self.hold[0] = True
+        if not self.hold[1] and keys[change]:
+            self.inventory.inc()
+            self.hold[1] = True
+        if keys[fire] and self.hold[2] == 0:
             self.attack()
+            self.hold[2] = 10
+        if self.hold[2] > 0:
+            self.hold[2] -= 1
         if (keys[right] and keys[left]) or (keys[up] and keys[down]):
             return
         horiMove = False
@@ -253,19 +290,80 @@ class Player(GameObject):
         x.lifetime += self.totalRB
         self.weapons.append(x)
 
+    def useItem(self, item):
+        if item == -1:
+            return
+        purpose = item.getPurpose()[0]
+        amount = item.getPurpose()[1]
+        if purpose == 'Heal':
+            if self.health == self.maxHealth:
+                self.inventory.addItem(item)
+            else:
+                self.health += amount
+                if self.health > self.maxHealth:
+                    self.health = self.maxHealth
+        elif purpose == 'TempInvis':
+            if self.itemTimer != 0:
+                self.inventory.addItem(item)
+            else:
+                self.itemTimer = 750
+                self.currentItem = purpose
+        elif purpose == 'Map':
+            self.flags[0] = True
+        elif purpose == 'Skip':
+            self.exitRoom = True
+        elif purpose == 'Clear':
+            self.flags[1] = True
+
+    def damage(self, x):
+        if self.currentItem != 'TempInvis':
+            GameObject.damage(self, x * self.armor)
+
     def attack(self):
         x = self.getCenter()[0]
         y = self.getCenter()[1]
+        if self.rangeB > 0 or self.damageB > 0:
+            for weapon in self.weapons:
+                weapon.lifetime += self.rangeB
+                weapon.hitDamage += self.damageB
+            self.rangeB = 0
+            self.damageB = 0
+        count = 0
         for weapon in self.weapons:
-            weapon.lifetime += self.rangeB
-            weapon.hitDamage += self.damageB
-            weapon.shoot(x, y, self.shootDir)
-        self.rangeB = 0
-        self.damageB = 0
+            if not weapon.isShooting:
+                weapon.shoot(x, y, self.shootDir)
+                self.weapons.append(self.weapons.pop(count))
+                return
+            count += 1
 
     def resetMap(self):
         self.map = [[0, 0]]
         self.currentRoom = [0, 0]
+
+    def getFlags(self):
+        temp = []
+        count = 0
+        for i in self.flags:
+            temp.append(i)
+            self.flags[count] = False
+            count += 1
+        return temp
+
+    def drawMoneyCount(self, x, y, scr):
+        t = Text('${}'.format(self.inventory.money), x, y, (255, 255, 255), 2, scr)
+        t.update()
+
+    def drawCurrentItem(self, x, y, scr):
+        pygame.draw.rect(scr, (255, 255, 255), (x, y, 94, 94))
+        pygame.draw.rect(scr, (0, 0, 0), (x + 5, y + 5, 84, 84))
+        item = self.inventory.peekItem()
+        if item == -1:
+            return
+        item[0].updatePos(x+7, y+7)
+        item[0].revive()
+        item[0].update()
+        t = Text('{}'.format(item[1]), x+72, y+72, (255, 255, 255), 2, scr)
+        t.update()
 
     def drawHealthBar(self, x, y, scr):
         pygame.draw.rect(scr, (255, 255, 255), [x, y, 200, 50])
@@ -343,7 +441,12 @@ class Player(GameObject):
                 if not (self.currentRoom in self.map):
                     self.map.append([self.currentRoom[0], self.currentRoom[1]])
             if Item == type(i) and self.collideWith(self, i):
-                if i.isBoost():
+                if len(i.getPurpose()[0]) > 6 and i.getPurpose()[0][0:6] == 'Random':
+                    cost = int(i.getPurpose()[0][6:])
+                    if self.inventory.money >= cost:
+                        i.spawnNew()
+                        self.inventory.money -= cost
+                elif i.isBoost():
                     purpose = i.getPurpose()[0]
                     amount = i.getPurpose()[1]
                     if purpose == 'HealthB':
@@ -363,12 +466,25 @@ class Player(GameObject):
                         self.health += amount
                         if self.health > self.maxHealth:
                             self.health = self.maxHealth
+                    elif purpose == 'ExtraShot':
+                        self.giveWeapon(Projectile(Sprite('block.txt', 0, 0, (255, 0, 0), -1, 1, self.sprite.screen), 12, 10, 1, False, True, False, 5, 10))
+                    elif purpose == 'ArmorB':
+                        if self.armor > .2:
+                            self.armor -= amount
+                            if self.armor < .2:
+                                self.armor = .2
+                    i.kill()
                 else:
                     self.inventory.addItem(i)
-                i.kill()
+                    i.kill()
         self.move(-self.xVel, -self.yVel)
         for i in self.weapons:
             i.update(objs)
+            self.inventory.money += i.takeMoney()
+        if self.itemTimer > 0:
+            self.itemTimer -= 1
+            if self.itemTimer == 0:
+                self.currentItem = ''
         GameObject.update(self, objs)
 
 
@@ -418,6 +534,16 @@ class Item(GameObject):
         return r"Item({}, {}, {}, {})".format(self.sprite.toString(),
                                               "['{}', {}]".format(self.purpose[0], self.purpose[1]), self.boost,
                                               self.stackable)
+
+    def spawnNew(self):
+        if self.purpose[0][0:6] == 'Random':
+            num = int(self.purpose[1])
+            self.move(64, 0)
+            newItem = itemPool[num][random.randint(0, len(itemPool[num])-1)]
+            self.sprite = Sprite(newItem[0], self.sprite.x, self.sprite.y, newItem[1], newItem[2], newItem[3], self.sprite.screen)
+            self.purpose = [newItem[4], newItem[5]]
+            self.boost = newItem[6]
+            self.stackable = newItem[7]
 
     def isStackable(self):
         return self.stackable
@@ -744,6 +870,7 @@ class Projectile(GameObject):
         self.knockVal = k
         self.knockFrames = kf
         self.knock = [0, 0, 0]
+        self.money = 0
         GameObject.__init__(self, spr, False, 1, g, 0)
         self.kill()
 
@@ -801,6 +928,11 @@ class Projectile(GameObject):
     def status(self):
         print('Am Shooting: {} Current tick: {} Alive: {}'.format(self.isShooting, self.ticks, self.alive))
 
+    def takeMoney(self):
+        temp = self.money
+        self.money = 0
+        return temp
+
     def update(self, objs):
         if self.isShooting:
             self.ticks += 1
@@ -815,6 +947,8 @@ class Projectile(GameObject):
                         if not self.pierce:
                             self.kill()
                             self.isShooting = False
+                        if not i.alive:
+                            self.money += i.drop
                     if not self.ghost and type(i) == Tile and self.collideWith(self, i):
                         if self.isPlayer and i.breakTile():
                             if not self.pierce:
@@ -833,13 +967,16 @@ class Projectile(GameObject):
 class Inventory:
     def __init__(self, items, m):
         self.inventory = items
+        self.keys = []
         self.boosts = []
         self.money = m
         self.index = -1
 
     def addItem(self, item):
         if item.getPurpose()[0] == 'Money':
-            self.money += item.getPurpose[1]
+            self.money += item.getPurpose()[1]
+        if item.getPurpose()[0][0:3] == 'Key':
+            self.keys.append(item)
         elif item.isBoost():
             self.boosts.append(item)
         else:
@@ -849,9 +986,13 @@ class Inventory:
                     found = True
                     if item.isStackable():
                         i[1] += 1
+                        if i[1] > 9:
+                            i[1] = 9
                     return
             if not found:
                 self.inventory.append([item, 1])
+            if self.index == -1:
+                self.index = 0
 
     def findAndRemove(self, s):
         for i in self.inventory:
@@ -866,8 +1007,36 @@ class Inventory:
         for i in self.inventory:
             if i[0].getPurpose()[0] == s:
                 return True
+        for i in self.keys:
+            if i.getPurpose()[0] == s:
+                return True
         return False
 
     def showItems(self):
         for i in self.inventory:
             print(i[0].toString())
+
+    def inc(self):
+        if len(self.inventory) == 0:
+            self.index = -1
+        else:
+            self.index += 1
+            if self.index == len(self.inventory):
+                self.index = 0
+
+    def useItem(self):
+        if self.index == -1:
+            return -1
+        item = self.inventory[self.index][0]
+        if self.inventory[self.index][1] == 1:
+            self.inventory.pop(self.index)
+            if self.index == len(self.inventory):
+                self.index -= 1
+        else:
+            self.inventory[self.index][1] -= 1
+        return item
+
+    def peekItem(self):
+        if self.index == -1:
+            return -1
+        return self.inventory[self.index]

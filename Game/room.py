@@ -231,7 +231,7 @@ class RoomArray:
             elif roomC == 3:
                 player.move(0, -400)
             elif roomC == 4:
-                player.move(832, 0)
+                player.move(860, 0)
             self.changeRoom(roomC)
         self.currentRoom.update(player)
 
