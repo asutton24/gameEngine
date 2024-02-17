@@ -30,14 +30,21 @@ def run(screen):
                         running = False
                         isLevelComplete = True
                     if event.key == pygame.K_r:
-                        p1.map = level.getMap()
+                        p1.map = level.getCoords()
                     if event.key == pygame.K_u:
                         p1.flipWasd()
+            flags = p1.getFlags()
+            if flags[0]:
+                p1.map = level.getCoords()
+            if flags[1]:
+                level.roomArr.currentRoom.enemiesBackup = '[]'
             p1.takeInput(pygame.key.get_pressed())
             level.update(p1)
             p1.update(level.returnAll())
             p1.drawHealthBar(64, 620, screen)
             p1.drawAutoMap(800, 620, screen)
+            p1.drawMoneyCount(400, 620, screen)
+            p1.drawCurrentItem(680, 620, screen)
             tickClock += 1
             if tickClock == 60:
                 tickClock = 0

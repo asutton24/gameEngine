@@ -32,10 +32,11 @@ class Sprite:
                     else:
                         self.frames.append(ast.literal_eval(line))
 
-
     def toString(self):
         return r"Sprite('{}', {}, {}, {}, {}, {}, self.screen)".format(self.path, self.x, self.y, self.color, self.animated, self.scale)
 
+    def editorString(self):
+        return r"Sprite('{}', {}, {}, {}, {}, {}, screen)".format(self.path, self.x, self.y, self.color, self.animated, self.scale)
 
     def manualSprite(self, p, h, f):
         self.pingRange = p
@@ -126,7 +127,7 @@ class Text:
     global hitbox
     chars = []
     lineCount = 0
-    dict = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!|-'
+    dict = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!|-$'
     with open('Sprites\\charList.txt', 'r') as file:
         lines = file.readlines()
         for line in lines:
