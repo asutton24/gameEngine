@@ -73,7 +73,7 @@ def main():
                     if index < 0:
                         index = 2
                 if event.key == pygame.K_r:
-                    level = randLevel(30, .1, .2, .75, .25, 20, 6)
+                    level = randLevel(5, .02, .2, .75, .25, 8, 3, 12)
                 if event.key == pygame.K_s:
                     sCount = 0
                     uCount = 0

@@ -33,20 +33,18 @@ class Sprite:
                         self.frames.append(ast.literal_eval(line))
 
     def toString(self):
-        return r"Sprite('{}', {}, {}, {}, {}, {}, self.screen)".format(self.path, self.x, self.y, self.color, self.animated, self.scale)
+        return r"Sprite({}, {}, {}, {}, {}, {}, self.screen)".format(repr(self.path), self.x, self.y, self.color, self.animated, self.scale)
 
     def editorString(self):
-        return r"Sprite('{}', {}, {}, {}, {}, {}, screen)".format(self.path, self.x, self.y, self.color, self.animated, self.scale)
+        return r"Sprite({}, {}, {}, {}, {}, {}, screen)".format(repr(self.path), self.x, self.y, self.color, self.animated, self.scale)
 
     def manualSprite(self, p, h, f):
         self.pingRange = p
         self.hitbox = h
         self.frames = f
 
-
     def isEqual(self, sprite):
         return self.path == sprite.path and self.animated == sprite.animated and self.color == sprite.color and self.scale == sprite.scale
-
 
     def updateSprite(self, path):
         with open(path, 'r') as file:
@@ -98,7 +96,7 @@ class Sprite:
                 yRow += 1
                 xRow = 0
                 draw = True
-            elif draw == True:
+            elif draw:
                 pygame.draw.rect(self.screen, self.color, (self.x + (xRow * self.scale), self.y + (yRow * self.scale), self.scale * i, self.scale))
                 xRow += i
                 draw = False
@@ -128,7 +126,7 @@ class Text:
     chars = []
     lineCount = 0
     dict = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!|-$'
-    with open('Sprites\\charList.txt', 'r') as file:
+    with open('Sprites\\charList.spr', 'r') as file:
         lines = file.readlines()
         for line in lines:
             if lineCount == 0:
