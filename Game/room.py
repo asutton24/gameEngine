@@ -47,7 +47,7 @@ def makeNode(level, x, y, direct, length, curve, branch, special, dep):
     return level
 
 
-def randLevel(nodeLen, branchProb, curveProb, specialProb, depreciation, minRooms, minSpecials):
+def randLevel(nodeLen, branchProb, curveProb, specialProb, depreciation, minRooms, minSpecials, maxRooms):
     level = []
     for i in range(24):
         level.append([])
@@ -75,18 +75,21 @@ def randLevel(nodeLen, branchProb, curveProb, specialProb, depreciation, minRoom
             x += 1
         y += 1
         x = 0
-    if roomCount < minRooms or specialCount < minSpecials:
-        return randLevel(nodeLen, branchProb, curveProb, specialProb, depreciation, minRooms, minSpecials)
+    if roomCount < minRooms or roomCount > maxRooms or specialCount < minSpecials:
+        return randLevel(nodeLen, branchProb, curveProb, specialProb, depreciation, minRooms, minSpecials, maxRooms)
     return level
 
 
 class Room:
-    def __init__(self, path, k, b, scr):
+    def __init__(self, path, k, b, d, s, h, scr):
         self.screen = scr
         self.doors = []
         self.tiles = []
         self.key = k
         self.locks = []
+        self.damageF = d
+        self.speedF = s
+        self.healthF = h
         with open('Rooms\\' + path, 'r') as file:
             lines = file.readlines()
             counter = 0
@@ -108,6 +111,14 @@ class Room:
                 elif counter == 3:
                     self.enemiesBackup = line
                     self.enemies = eval(line)
+                    dropF = (self.healthF * 3 + self.damageF * 2 + self.speedF) / 6
+                    for i in self.enemies:
+                        i.speed *= self.speedF
+                        i.hitDamage = int(i.hitDamage * self.damageF)
+                        i.health *= self.healthF
+                        for j in i.projectiles:
+                            j.hitDamage = int(j.hitDamage * self.damageF + 0.5)
+                        i.drop = int(i.drop * dropF + 0.5)
                 counter += 1
         self.background = b
 
@@ -124,23 +135,31 @@ class Room:
 
     def resetEnemies(self):
         self.enemies = eval(self.enemiesBackup)
+        dropF = (self.healthF * 3 + self.damageF * 2 + self.speedF) / 6
+        for i in self.enemies:
+            i.speed *= self.speedF
+            i.hitDamage = int(i.hitDamage * self.damageF)
+            i.health *= self.healthF
+            for j in i.projectiles:
+                j.hitDamage = int(j.hitDamage * self.damageF + 0.5)
+            i.drop = int(i.drop * dropF + 0.5)
 
     def setDoors(self, u, d, l, r):
         self.doors = []
         if u:
-            self.doors.append(Tile(Sprite('block.txt', 448, 0, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Up'))
-            self.doors.append(Tile(Sprite('block.txt', 512, 0, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Up'))
+            self.doors.append(Tile(Sprite('block.spr', 448, 0, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Up'))
+            self.doors.append(Tile(Sprite('block.spr', 512, 0, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Up'))
         if d:
             self.doors.append(
-                Tile(Sprite('block.txt', 448, 512, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Down'))
+                Tile(Sprite('block.spr', 448, 512, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Down'))
             self.doors.append(
-                Tile(Sprite('block.txt', 512, 512, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Down'))
+                Tile(Sprite('block.spr', 512, 512, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Down'))
         if l:
             self.doors.append(
-                Tile(Sprite('block.txt', 0, 256, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Left'))
+                Tile(Sprite('block.spr', 0, 256, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Left'))
         if r:
             self.doors.append(
-                Tile(Sprite('block.txt', 960, 256, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Right'))
+                Tile(Sprite('block.spr', 960, 256, (0, 0, 0), -1, 8, self.screen), False, False, 100, 'Right'))
         for i in self.tiles:
             if u and (i.getPos() == [448, 0] or i.getPos() == [512, 0]):
                 i.kill()
@@ -153,20 +172,20 @@ class Room:
 
     def setLocks(self, u, d, l, r):
         if u != 0:
-            self.locks.append(Tile(Sprite('door.txt', 448, 0, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+            self.locks.append(Tile(Sprite('door.spr', 448, 0, (255, 255, 255), -1, 4, self.screen), True, False, 100,
                                    'Key' + str(u)))
-            self.locks.append(Tile(Sprite('door.txt', 512, 0, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+            self.locks.append(Tile(Sprite('door.spr', 512, 0, (255, 255, 255), -1, 4, self.screen), True, False, 100,
                                    'Key' + str(u)))
         if d != 0:
-            self.locks.append(Tile(Sprite('door.txt', 448, 512, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+            self.locks.append(Tile(Sprite('door.spr', 448, 512, (255, 255, 255), -1, 4, self.screen), True, False, 100,
                                    'Key' + str(d)))
-            self.locks.append(Tile(Sprite('door.txt', 512, 512, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+            self.locks.append(Tile(Sprite('door.spr', 512, 512, (255, 255, 255), -1, 4, self.screen), True, False, 100,
                                    'Key' + str(d)))
         if l != 0:
-            self.locks.append(Tile(Sprite('door.txt', 0, 256, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+            self.locks.append(Tile(Sprite('door.spr', 0, 256, (255, 255, 255), -1, 4, self.screen), True, False, 100,
                                    'Key' + str(l)))
         if r != 0:
-            self.locks.append(Tile(Sprite('door.txt', 960, 256, (255, 255, 255), -1, 4, self.screen), True, False, 100,
+            self.locks.append(Tile(Sprite('door.spr', 960, 256, (255, 255, 255), -1, 4, self.screen), True, False, 100,
                                    'Key' + str(r)))
 
     def returnAll(self):
@@ -175,14 +194,14 @@ class Room:
 
 class RoomArray:
 
-    def __init__(self, r, b, s):
+    def __init__(self, r, b, d, sp, h, s):
         self.rooms = []
         self.coords = []
         self.currentCoords = [0, 0]
         lockedRooms = []
         keys = []
         for i in r:
-            self.rooms.append(Room(i[0], i[3], b, s))
+            self.rooms.append(Room(i[0], i[3], b, d, sp, h, s))
             self.coords.append([i[1], i[2]])
             if i[3] > 0:
                 lockedRooms.append([i[1], i[2]])
@@ -260,14 +279,14 @@ class RoomArray:
 
 class Level:
 
-    def __init__(self, l, p, c, d, b, s):
+    def __init__(self, l, p, c, d, b, dmg, spd, hel, s):
         self.path = 'Rooms\\' + p
         self.rooms = os.listdir(self.path)
         self.rooms.remove('Specials')
         self.specialRooms = os.listdir(self.path + '\\Specials')
-        self.specialRooms.remove('Start.txt')
-        self.specialRooms.remove('Exit.txt')
-        self.specialRooms.remove('ExitKeyRoom.txt')
+        self.specialRooms.remove('Start.room')
+        self.specialRooms.remove('Exit.room')
+        self.specialRooms.remove('ExitKeyRoom.room')
         if str == type(l):
             with open('Levels\\' + l, 'r') as file:
                 lines = file.readlines()
@@ -275,18 +294,18 @@ class Level:
                 file.close()
         else:
             self.layout = ''
-            for i in randLevel(l[0], l[1], l[2], l[3], l[4], l[5], l[6]):
+            for i in randLevel(l[0], l[1], l[2], l[3], l[4], l[5], l[6], l[7]):
                 for j in i:
                     self.layout += j
         xOff, yOff = self.layout.index('S') % 24, int(self.layout.index('S') / 24)
         roomList = []
         specials = []
-        roomList.append([p + '\\Specials\\Start.txt', 0, 0, 0])
+        roomList.append([p + '\\Specials\\Start.room', 0, 0, 0])
         x = 0
         y = 0
         for i in self.layout:
             if i == 'N':
-                roomList.append([self.randRoom(), x - xOff, y - yOff, 0])
+                roomList.append([p + '\\' + self.randRoom(), x - xOff, y - yOff, 0])
             if i == 'U':
                 specials.append([x - xOff, y - yOff])
             x += 1
@@ -294,17 +313,17 @@ class Level:
                 y += 1
                 x = 0
         temp = specials.pop(random.randint(0, len(specials) - 1))
-        roomList.append([p + '\\Specials\\ExitKeyRoom.txt', temp[0], temp[1], 0])
+        roomList.append([p + '\\Specials\\ExitKeyRoom.room', temp[0], temp[1], 0])
         temp = specials.pop(random.randint(0, len(specials) - 1))
-        roomList.append([p + '\\Specials\\Exit.txt', temp[0], temp[1], 1])
+        roomList.append([p + '\\Specials\\Exit.room', temp[0], temp[1], 1])
         while len(specials) > 0 and random.random() < c:
             temp = specials.pop(random.randint(0, len(specials) - 1))
             roomList.append([p + '\\Specials\\' + self.randSpecialRoom(), temp[0], temp[1], 0])
             c *= d
         while len(specials) > 0:
             temp = specials.pop(0)
-            roomList.append([self.randRoom(), temp[0], temp[1], 0])
-        self.roomArr = RoomArray(roomList, b, s)
+            roomList.append([p + '\\' + self.randRoom(), temp[0], temp[1], 0])
+        self.roomArr = RoomArray(roomList, b, dmg, spd, hel, s)
 
     def randRoom(self):
         return self.rooms[random.randint(0, len(self.rooms) - 1)]

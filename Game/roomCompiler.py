@@ -1,7 +1,9 @@
 import os
 from gameObject import *
+import pygame
 
-
+pygame.init()
+screen = pygame.display.set_mode([1024, 720])
 rooms = os.listdir('RoomSaves')
 tiles = []
 enemies = []

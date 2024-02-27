@@ -5,10 +5,10 @@ import pygame
 running = True
 p = 'room9.txt'
 screen = pygame.display.set_mode([1024, 720], pygame.FULLSCREEN)
-p1 = Player(70, 250, screen)
+p1 = Player(70, 270, screen)
 clock = pygame.time.Clock()
-room = Room(p, 0, (0, 0, 0), screen)
-p1.giveWeapon(Projectile(Sprite('block.txt', 0, 0, (255, 0, 0), -1, 1, screen), 12, 10, 1, False, True, False, 5, 10))
+room = Room(p, 0, (0, 0, 0), 1, 1, 1, screen)
+p1.giveWeapon(Projectile(Sprite('block.spr', 0, 0, (255, 0, 0), -1, 1, screen), 12, 10, 10, False, True, False, 5, 10))
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

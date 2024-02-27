@@ -195,6 +195,9 @@ class Player(GameObject):
         self.itemTimer = 0
         self.currentItem = ''
         self.flags = [False, False]
+        self.queue = []
+        self.message = ''
+        self.messageTimer = 0
         GameObject.__init__(self, self.sprites[0], False, 100, False, 30)
 
     def takeInput(self, keys):
@@ -282,6 +285,8 @@ class Player(GameObject):
 
     def getRoomChange(self):
         temp = self.roomChange
+        if temp > 0:
+            self.setKnockback(0, 0, 0)
         self.roomChange = 0
         return temp
 
@@ -350,7 +355,8 @@ class Player(GameObject):
         return temp
 
     def drawMoneyCount(self, x, y, scr):
-        t = Text('${}'.format(self.inventory.money), x, y, (255, 255, 255), 2, scr)
+        msg = '${}'.format(self.inventory.money)
+        t = Text(msg, x - ((len(msg)-2) * 16), y, (255, 255, 255), 2, scr)
         t.update()
 
     def drawCurrentItem(self, x, y, scr):
@@ -385,6 +391,20 @@ class Player(GameObject):
         pygame.draw.rect(scr, (255, 0, 0),
                          [(x + 5) + 4 * (self.currentRoom[0] + 12), (y + 5) + 4 * (12 - self.currentRoom[1]), 4, 4])
 
+    def drawPos(self, x, y, scr):
+        t = Text('{} {}'.format(int(self.getPos()[0]), int(self.getPos()[1])), x, y, (255, 255, 255), 2, scr)
+        t.update()
+
+    def drawMessage(self, x, y, scr):
+        pygame.draw.rect(scr, (255, 255, 255), [x, y, 332, 28])
+        pygame.draw.rect(scr, (0, 0, 0), [x + 5, y + 5, 322, 18])
+        if self.message != '':
+            t = Text(self.message, x+6, y+6, (255, 255, 255), 2, scr)
+            t.update()
+
+    def addMessage(self, m):
+        self.queue.append(m)
+
     def flipWasd(self):
         self.wasd = not self.wasd
 
@@ -415,18 +435,18 @@ class Player(GameObject):
         changeDone = False
         for i in objs:
             if type(i) == Tile and self.collideWith(self, i):
-                if i.getPurpose() == 'Up' and not locked and not changeDone:
+                if i.getPurpose() == 'Up' and not locked and not changeDone and 436 <= self.getPos()[0] <= 540:
                     self.roomChange = 1
                     self.currentRoom[1] += 1
                     changeDone = True
-                elif i.getPurpose() == 'Right' and not locked:
+                elif i.getPurpose() == 'Right' and not locked and 256 <= self.getPos()[1] <= 272:
                     self.roomChange = 2
                     self.currentRoom[0] += 1
-                elif i.getPurpose() == 'Down' and not locked and not changeDone:
+                elif i.getPurpose() == 'Down' and not locked and not changeDone and 436 <= self.getPos()[0] <= 540:
                     self.roomChange = 3
                     self.currentRoom[1] -= 1
                     changeDone = True
-                elif i.getPurpose() == 'Left' and not locked:
+                elif i.getPurpose() == 'Left' and not locked and 256 <= self.getPos()[1] <= 272:
                     self.roomChange = 4
                     self.currentRoom[0] -= 1
                 elif i.getPurpose()[0:3] == 'Key':
@@ -454,25 +474,32 @@ class Player(GameObject):
                         self.health += amount
                         if self.health > self.maxHealth:
                             self.health = self.maxHealth
+                        self.addMessage('health up')
                     elif purpose == 'SpeedB':
                         self.speed += amount
+                        self.addMessage('speed up')
                     elif purpose == 'DamageB':
                         self.damageB = amount
                         self.totalDB += amount
+                        self.addMessage('damage up')
                     elif purpose == 'RangeB':
                         self.rangeB = amount
                         self.totalRB += amount
+                        self.addMessage('range up')
                     elif purpose == 'Heal':
                         self.health += amount
                         if self.health > self.maxHealth:
                             self.health = self.maxHealth
+                        self.addMessage('health recovered')
                     elif purpose == 'ExtraShot':
-                        self.giveWeapon(Projectile(Sprite('block.txt', 0, 0, (255, 0, 0), -1, 1, self.sprite.screen), 12, 10, 1, False, True, False, 5, 10))
+                        self.giveWeapon(Projectile(Sprite('block.spr', 0, 0, (255, 0, 0), -1, 1, self.sprite.screen), 12, 10, 10, False, True, False, 5, 10))
+                        self.addMessage('got an extra shot')
                     elif purpose == 'ArmorB':
                         if self.armor > .2:
                             self.armor -= amount
                             if self.armor < .2:
                                 self.armor = .2
+                        self.addMessage('got armor')
                     i.kill()
                 else:
                     self.inventory.addItem(i)
@@ -485,6 +512,14 @@ class Player(GameObject):
             self.itemTimer -= 1
             if self.itemTimer == 0:
                 self.currentItem = ''
+        if self.messageTimer > 0:
+            self.messageTimer -= 1
+        else:
+            if self.message != '':
+                self.message = ''
+            if len(self.queue) != 0:
+                self.message = self.queue.pop(0)
+                self.messageTimer = 120
         GameObject.update(self, objs)
 
 
@@ -975,7 +1010,7 @@ class Inventory:
     def addItem(self, item):
         if item.getPurpose()[0] == 'Money':
             self.money += item.getPurpose()[1]
-        if item.getPurpose()[0][0:3] == 'Key':
+        elif item.getPurpose()[0][0:3] == 'Key':
             self.keys.append(item)
         elif item.isBoost():
             self.boosts.append(item)

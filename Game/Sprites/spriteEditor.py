@@ -104,6 +104,8 @@ def drawBoard(scr, b, blocks):
         for j in range(blocks):
             if b[i][j]:
                 pygame.draw.rect(scr, (0, 0, 0), (int(j * (512/blocks)), int(i * (512/blocks)), int(512/blocks), int(512/blocks)))
+
+
 def drawBG(scr, num):
     num = (2 ** (num - 1))
     l = 512 / num

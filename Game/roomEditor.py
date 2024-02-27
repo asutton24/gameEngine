@@ -40,7 +40,6 @@ def main():
     pointSprites = []
     drawMode = True
     pointText = Text('enter/points/when/done/l for/loop/r for/reverse', 1024, 100, (255, 255, 255), 2, screen)
-    frames = Counter(0, 1024, 0, (255, 255, 255), 2, screen)
     mode = 't'
     index = 0
     realX = 0
@@ -115,6 +114,8 @@ def main():
                     for i in info:
                         coords = i.pop(0)
                         board[coords[0]][coords[1]] = i
+                elif event.key == pygame.K_BACKSPACE:
+                    board = newBoard()
                 elif event.key == pygame.K_f:
                     if mode == 't':
                         for i in range(16):
@@ -122,7 +123,7 @@ def main():
                             board[8][i].append(['t', index, Sprite(tiles[index][0], i * 64, 512, tiles[index][1], tiles[index][2], tiles[index][3], screen)])
                         for i in range(7):
                             board[i+1][0].append(['t', index, Sprite(tiles[index][0], 0, (i+1) * 64, tiles[index][1], tiles[index][2], tiles[index][3], screen)])
-                            board[i + 1][0].append(['t', index, Sprite(tiles[index][0], 960, (i + 1) * 64, tiles[index][1], tiles[index][2], tiles[index][3], screen)])
+                            board[i + 1][15].append(['t', index, Sprite(tiles[index][0], 960, (i + 1) * 64, tiles[index][1], tiles[index][2], tiles[index][3], screen)])
                 elif event.key == pygame.K_p:
                     for i in board:
                         for j in i:
@@ -155,7 +156,10 @@ def main():
                             if sCount == 0:
                                 saveSub += '[{}, {}]'.format(j[0], j[1])
                             else:
-                                saveSub += "['{}', {}, {}]".format(j[0], j[1], j[2].editorString())
+                                if len(j) == 3:
+                                    saveSub += "['{}', {}, {}]".format(j[0], j[1], j[2].editorString())
+                                else:
+                                    saveSub += "['{}', {}, {}, {}]".format(j[0], j[1], j[2].editorString(), j[3])
                             if sCount < maximum:
                                 sCount += 1
                                 saveSub += ', '
@@ -294,8 +298,6 @@ def main():
             pointText.update()
             for i in pointSprites:
                 i.update()
-        frames.inc()
-        frames.update()
         clock.tick(60)
         pygame.display.update()
 
