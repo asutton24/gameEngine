@@ -1,6 +1,7 @@
 import ast
 import pygame
 
+
 class Sprite:
 
     def __init__(self, path, x, y, c, a, s, scr):
@@ -87,6 +88,7 @@ class Sprite:
 
     def getScale(self):
         return self.scale
+
     def draw(self):
         xRow = 0
         yRow = 0

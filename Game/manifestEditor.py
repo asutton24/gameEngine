@@ -36,10 +36,12 @@ def main():
             file.write('\n')
     if inp == 'e':
         faceType = int(input('What rotation sprites are there? 1 for single sprite, 2 for left/right, 3 for up/down 4 for all 4 directions: '))
-        moveType = int(input('What movement type? 0 for stationary, 1 for chase, 2 for random, 3 for biased random, 4 for set path'))
+        moveType = int(input('What movement type? 0 for stationary, 1 for chase, 2 for random, 3 for biased random, 4 for set path, 5 for point rotation, add 100 to make a solid enemy'))
         speed = int(input('Enemy speed?: '))
         if moveType == 2 or moveType == 3:
             moveLen = int(input('What is the average distanced covered before changing directions?'))
+        elif moveType == 5:
+            moveLen = int(input('How many frames between switching positions?'))
         else:
             moveLen = 0
         gho = eval(input('Is this a ghost? (True/False): '))

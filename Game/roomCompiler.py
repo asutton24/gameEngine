@@ -124,6 +124,9 @@ for room in rooms:
     else:
         path += 'Specials\\' + tempPath + '.room'
     with open(path, 'w') as file:
+        pass
+        file.close()
+    with open(path, 'w') as file:
         file.write('{}\n{}\n{}\n{}'.format(tileIndex, saveTiles, saveItems, saveEnemies))
         file.close()
 print('Compiled!')

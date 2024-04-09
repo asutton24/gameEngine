@@ -9,7 +9,13 @@ itemPool = [[['Items\\\\pmed.spr', (119, 252, 96), -1, 4, 'Heal', 25, False, Tru
 ['Items\\\\hpup.spr', (173, 2, 2), -1, 4, 'HealthB', 25, True, False],
 ['Items\\\\speedup.spr', (255, 180, 115), -1, 4, 'SpeedB', .5, True, False],
 ['Items\\\\rangeup.spr', (87, 9, 85), -1, 4, 'RangeB', 10, True, False],
-['Items\\\\akimbo.spr', (100, 100, 100), -1, 4, 'ExtraShot', 1, True, False]]]
+['Items\\\\akimbo.spr', (100, 100, 100), -1, 4, 'ExtraShot', 1, True, False],
+['Items\\\\armor.spr', (100, 100, 100), -1, 4, 'ArmorB', 15, True, False]]]
+
+
+def randItem(pool, scr):
+    item = itemPool[pool][random.randint(0, len(itemPool[pool]) - 1)]
+    return Item(Sprite(item[0], 0, 0, item[1], item[2], item[3], scr), [item[4], item[5]], item[6], item[7])
 
 
 def sign(x):
@@ -53,7 +59,7 @@ class GameObject:
             self.alive = True
 
     def damage(self, x):
-        if self.alive and self.iFrames == 0:
+        if self.alive and self.iFrames <= 0 and x > 0:
             self.health -= x
             self.iFrames = self.iMax
             if self.health <= 0:
@@ -99,25 +105,26 @@ class GameObject:
         self.sprite = x
 
     def setKnockback(self, x, y, z):
-        self.knockback = [x, y, z]
+        if self.iFrames == self.iMax:
+            self.knockback = [x, y, z]
 
-    def collideWith(self, go1, go2):
-        if not go1.alive or not go2.alive:
+    def collideWith(self, go2):
+        if not self.alive or not go2.alive:
             return False
         if not (
-                rectCollide(go1.sprite.getPos()[0], go1.sprite.getPing() * go1.sprite.getScale(),
-                            go1.sprite.getPos()[1],
-                            go1.sprite.getPing() * go1.sprite.getScale(), go2.sprite.getPos()[0],
+                rectCollide(self.sprite.getPos()[0], self.sprite.getPing() * self.sprite.getScale(),
+                            self.sprite.getPos()[1],
+                            self.sprite.getPing() * self.sprite.getScale(), go2.sprite.getPos()[0],
                             go2.sprite.getPing() * go2.sprite.getScale(), go2.sprite.getPos()[1],
                             go2.sprite.getPing() * go2.sprite.getScale(), 0)):
             return False
         else:
-            for i in go1.sprite.getHitbox():
+            for i in self.sprite.getHitbox():
                 for j in go2.sprite.getHitbox():
-                    if rectCollide((i[0] * go1.sprite.getScale()) + go1.sprite.getPos()[0],
-                                   (i[2] - i[0] + 1) * go1.sprite.getScale(),
-                                   (i[1] * go1.sprite.getScale()) + go1.sprite.getPos()[1],
-                                   (i[3] - i[1] + 1) * go1.sprite.getScale(),
+                    if rectCollide((i[0] * self.sprite.getScale()) + self.sprite.getPos()[0],
+                                   (i[2] - i[0] + 1) * self.sprite.getScale(),
+                                   (i[1] * self.sprite.getScale()) + self.sprite.getPos()[1],
+                                   (i[3] - i[1] + 1) * self.sprite.getScale(),
                                    (j[0] * go2.sprite.getScale()) + go2.sprite.getPos()[0],
                                    (j[2] - j[0] + 1) * go2.sprite.getScale(),
                                    (j[1] * go2.sprite.getScale()) + go2.sprite.getPos()[1],
@@ -147,11 +154,11 @@ class GameObject:
                 yMove = self.yVel
             self.move(xMove, 0)
             for i in objs:
-                if i.solid and i.alive and self.collideWith(self, i):
+                if i.solid and i.alive and self.collideWith(i):
                     self.move(-1 * xMove, 0)
             self.move(0, yMove)
             for i in objs:
-                if i.solid and i.alive and not self.ghost and self.collideWith(self, i):
+                if i.solid and i.alive and not self.ghost and self.collideWith(i):
                     self.move(0, -1 * yMove)
             pos = self.getPos()
             if pos[0] < 0:
@@ -180,6 +187,7 @@ class Player(GameObject):
         self.weapons = []
         self.maxHealth = 100
         self.exitRoom = False
+        self.gotoBoss = 0
         self.inventory = Inventory([], 0)
         self.currentRoom = [0, 0]
         self.map = [[0, 0]]
@@ -290,6 +298,11 @@ class Player(GameObject):
         self.roomChange = 0
         return temp
 
+    def checkBoss(self):
+        temp = self.gotoBoss
+        self.gotoBoss = 0
+        return temp
+
     def giveWeapon(self, x):
         x.hitDamage += self.totalDB
         x.lifetime += self.totalRB
@@ -325,6 +338,8 @@ class Player(GameObject):
             GameObject.damage(self, x * self.armor)
 
     def attack(self):
+        if not self.alive:
+            return
         x = self.getCenter()[0]
         y = self.getCenter()[1]
         if self.rangeB > 0 or self.damageB > 0:
@@ -371,11 +386,15 @@ class Player(GameObject):
         t = Text('{}'.format(item[1]), x+72, y+72, (255, 255, 255), 2, scr)
         t.update()
 
+    def drawIframes(self, x, y, scr):
+        t = Text('{}'.format(self.iFrames), x, y, (255, 255, 255), 2, scr)
+        t.update()
+
     def drawHealthBar(self, x, y, scr):
         pygame.draw.rect(scr, (255, 255, 255), [x, y, 200, 50])
         pygame.draw.rect(scr, (0, 0, 0), [x + 5, y + 5, 190, 40])
         pygame.draw.rect(scr, (255, 0, 0), [x + 5, y + 5, int(190 * self.health / self.maxHealth), 40])
-        helString = "{}|{}".format(self.health, self.maxHealth)
+        helString = "{}|{}".format(int(self.health + 0.5), self.maxHealth)
         if len(helString) % 2 == 1:
             start = 100 - 8 - 16 * int(len(helString) / 2)
         else:
@@ -408,6 +427,10 @@ class Player(GameObject):
     def flipWasd(self):
         self.wasd = not self.wasd
 
+    def changeColor(self, c):
+        for i in self.sprites:
+            i.updateColor(c)
+
     def update(self, objs):
         if self.newSprite:
             pos = self.sprite.getPos()
@@ -434,7 +457,7 @@ class Player(GameObject):
         locked = False
         changeDone = False
         for i in objs:
-            if type(i) == Tile and self.collideWith(self, i):
+            if type(i) == Tile and self.collideWith(i):
                 if i.getPurpose() == 'Up' and not locked and not changeDone and 436 <= self.getPos()[0] <= 540:
                     self.roomChange = 1
                     self.currentRoom[1] += 1
@@ -458,9 +481,11 @@ class Player(GameObject):
                 elif i.getPurpose() == 'Exit':
                     self.exitRoom = True
                     self.resetMap()
+                elif i.getPurpose()[0:4] == 'Boss':
+                    self.gotoBoss = int(i.getPurpose()[4:])
                 if not (self.currentRoom in self.map):
                     self.map.append([self.currentRoom[0], self.currentRoom[1]])
-            if Item == type(i) and self.collideWith(self, i):
+            if Item == type(i) and self.collideWith(i):
                 if len(i.getPurpose()[0]) > 6 and i.getPurpose()[0][0:6] == 'Random':
                     cost = int(i.getPurpose()[0][6:])
                     if self.inventory.money >= cost:
@@ -496,7 +521,7 @@ class Player(GameObject):
                         self.addMessage('got an extra shot')
                     elif purpose == 'ArmorB':
                         if self.armor > .2:
-                            self.armor -= amount
+                            self.armor -= amount * .01
                             if self.armor < .2:
                                 self.armor = .2
                         self.addMessage('got armor')
@@ -589,13 +614,22 @@ class Item(GameObject):
 
 class Enemy(GameObject):
     def __init__(self, spr, faceType, moveType, speed, moveLen, gho, health, drop, damage, proj, points, im):
-        if moveType == 4:
+        if moveType == 4 or moveType == 5:
             self.points = points
             self.moving = False
             self.indexCount = 1
+            if moveType == 5:
+                self.maxDelay = moveLen
+            else:
+                self.maxDelay = 0
         else:
             self.points = []
         self.mType = moveType
+        makeSolid = False
+        if self.mType >= 100:
+            print('solid attempted')
+            makeSolid = True
+            self.mType -= 100
         self.speed = speed
         self.drop = drop
         self.hitDamage = damage
@@ -606,21 +640,13 @@ class Enemy(GameObject):
         self.projStatus = []
         self.projectiles = []
         self.tickClock = 0
-        if len(proj) == 4:
-            self.attackType = proj[0]
-            for i in range(proj[2]):
-                self.projectiles.append(proj[1])
-                self.projStatus.append(False)
-            self.chance = proj[3]
-        else:
-            self.attackType = None
-            self.chance = 0
+        self.maxHP = health
         if self.mType == 4:
             im = 0
         if faceType == 1:
             self.sprites = spr
             self.facing = 0
-            GameObject.__init__(self, spr, False, health, gho, im)
+            GameObject.__init__(self, spr, makeSolid, health, gho, im)
         else:
             if type(spr[1]) == str:
                 self.sprites = []
@@ -633,11 +659,25 @@ class Enemy(GameObject):
                         self.sprites.append(Sprite(i, 0, 0, spr[0].color, spr[0].animated, spr[0].scale, spr[0].screen))
             else:
                 self.sprites = spr
-            GameObject.__init__(self, spr[0], False, health, gho, im)
+            GameObject.__init__(self, spr[0], makeSolid, health, gho, im)
             if faceType == 2:
                 self.facing = 1
             if faceType == 3 or faceType == 4:
                 self.facing = 2
+        if len(proj) == 4:
+            if type(self.sprite) == list:
+                self.screen = self.sprite[0].screen
+            else:
+                self.screen = self.sprite.screen
+            self.attackType = proj[0]
+            for i in range(proj[2]):
+                self.projectiles.append(eval(proj[1].toString()))
+                self.projStatus.append(False)
+            self.chance = proj[3]
+        else:
+            self.attackType = None
+            self.chance = 0
+        self.solid = makeSolid
 
     def toString(self):
         if self.fType == 1:
@@ -669,7 +709,8 @@ class Enemy(GameObject):
         else:
             projStr = '[{}, {}, {}, {}]'.format(self.attackType, self.projectiles[0].toString(), len(self.projectiles),
                                                 self.chance)
-        return "Enemy({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(spr, self.fType, self.mType, self.speed,
+
+        return "Enemy({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(spr, self.fType, self.mType + self.solid * 100, self.speed,
                                                                               self.avgLen,
                                                                               self.ghost, self.health, self.drop,
                                                                               self.hitDamage, projStr, self.points,
@@ -711,6 +752,8 @@ class Enemy(GameObject):
                         self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], 0)
             elif self.attackType == 6:
                 self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], random.randint(0, 3))
+            elif self.attackType == 7:
+                self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], self.facing)
             else:
                 self.projectiles[projIndex].shoot(selfPos[0], selfPos[1], self.attackType)
 
@@ -745,6 +788,10 @@ class Enemy(GameObject):
             self.changeSprite(self.sprites[(x + 2) % 4])
             self.updatePos(pos[0], pos[1])
             self.facing = x
+
+    def revive(self):
+        self.alive = True
+        self.health = self.maxHP
 
     def update(self, player, objs):
         # 0: Stationary 1: Chase 2: Random move
@@ -791,10 +838,10 @@ class Enemy(GameObject):
                         udBias = -1
                     else:
                         udBias = 1
-                    temp = random.randint(0, 7)
+                    temp = random.randint(0, 11)
                     if temp < 4:
                         self.currentDir = temp
-                    elif temp < 6:
+                    elif temp < 8:
                         if lrBias == 1:
                             self.currentDir = 1
                         else:
@@ -868,7 +915,19 @@ class Enemy(GameObject):
                     self.points.append(1)
                     self.indexCount = 1
             GameObject.update(self, objs)
-        if self.collideWith(self, player):
+        elif self.mType == 5:
+            self.setKnockback(0, 0, 0)
+            if self.avgLen <= 0:
+                pos = self.points[self.indexCount]
+                self.updatePos(pos[0], pos[1])
+                self.avgLen = self.maxDelay
+                self.indexCount += 1
+                if self.indexCount == len(self.points):
+                    self.indexCount = 0
+            else:
+                self.avgLen -= 1
+            GameObject.update(self, objs)
+        if self.collideWith(player):
             player.damage(self.hitDamage)
         if self.chance < 1:
             if random.random() <= self.chance:
@@ -976,7 +1035,7 @@ class Projectile(GameObject):
                 GameObject.setVel(self, 0, 0)
             if self.isShooting:
                 for i in objs:
-                    if self.isPlayer and type(i) == Enemy and self.collideWith(self, i):
+                    if self.isPlayer and type(i) == Enemy and self.collideWith(i):
                         i.damage(self.hitDamage)
                         i.setKnockback(self.knock[0], self.knock[1], self.knockFrames)
                         if not self.pierce:
@@ -984,7 +1043,7 @@ class Projectile(GameObject):
                             self.isShooting = False
                         if not i.alive:
                             self.money += i.drop
-                    if not self.ghost and type(i) == Tile and self.collideWith(self, i):
+                    if not self.ghost and type(i) == Tile and self.collideWith(i):
                         if self.isPlayer and i.breakTile():
                             if not self.pierce:
                                 self.kill()
@@ -992,7 +1051,7 @@ class Projectile(GameObject):
                         else:
                             self.kill()
                             self.isShooting = False
-                    if not self.isPlayer and type(i) == Player and self.collideWith(self, i):
+                    if not self.isPlayer and type(i) == Player and self.collideWith(i):
                         i.damage(self.hitDamage)
                         i.setKnockback(self.knock[0], self.knock[1], self.knockFrames)
                         self.isShooting = False
@@ -1005,11 +1064,13 @@ class Inventory:
         self.keys = []
         self.boosts = []
         self.money = m
+        self.scoreToCollect = 0
         self.index = -1
 
     def addItem(self, item):
         if item.getPurpose()[0] == 'Money':
             self.money += item.getPurpose()[1]
+            self.scoreToCollect += item.getPurpose()[1]
         elif item.getPurpose()[0][0:3] == 'Key':
             self.keys.append(item)
         elif item.isBoost():
@@ -1075,3 +1136,37 @@ class Inventory:
         if self.index == -1:
             return -1
         return self.inventory[self.index]
+
+
+class Spawner(GameObject):
+
+    def __init__(self, spr, delay, enemy):
+        GameObject.__init__(self, spr, False, 100000, False, 100000)
+        self.setDelay = True
+        if delay < 1:
+            self.setDelay = False
+        self.delay = delay
+        self.timer = delay
+        self.enemy = enemy
+        self.spawnFlag = False
+
+    def checkFlag(self):
+        oldFlag = self.spawnFlag
+        self.spawnFlag = False
+        return oldFlag
+
+    def getEnemy(self):
+        return self.enemy
+
+    def update(self, objs):
+        GameObject.update(self, objs)
+        if self.setDelay:
+            if self.timer == 0:
+                self.spawnFlag = True
+                self.timer = self.delay
+            else:
+                self.timer -= 1
+        else:
+            if random.random() < self.delay:
+                self.spawnFlag = True
+

@@ -90,6 +90,7 @@ class Room:
         self.damageF = d
         self.speedF = s
         self.healthF = h
+        self.path = path
         with open('Rooms\\' + path, 'r') as file:
             lines = file.readlines()
             counter = 0
@@ -131,7 +132,7 @@ class Room:
         for i in self.items:
             i.update()
         for i in self.enemies:
-            i.update(p1, self.tiles)
+            i.update(p1, self.tiles + self.locks)
 
     def resetEnemies(self):
         self.enemies = eval(self.enemiesBackup)
@@ -142,6 +143,7 @@ class Room:
             i.health *= self.healthF
             for j in i.projectiles:
                 j.hitDamage = int(j.hitDamage * self.damageF + 0.5)
+                j.speed *= self.speedF
             i.drop = int(i.drop * dropF + 0.5)
 
     def setDoors(self, u, d, l, r):
@@ -188,9 +190,132 @@ class Room:
             self.locks.append(Tile(Sprite('door.spr', 960, 256, (255, 255, 255), -1, 4, self.screen), True, False, 100,
                                    'Key' + str(r)))
 
+    def showPath(self, x, y):
+        newP = ''
+        for i in range(len(self.path)):
+            if self.path[i] == '\\':
+                newP += '|'
+            else:
+                newP += self.path[i]
+        t = Text(newP, x, y, (255, 255, 255), 2, self.screen)
+        t.update()
+
     def returnAll(self):
         return self.locks + self.doors + self.tiles + self.items + self.enemies
 
+
+class BossRoom(Room):
+
+    def __init__(self, path, b, head, phase, pTime, perm, regen, rTime, m, buff, scr):
+        Room.__init__(self, path, 0, b, 1, 1, 1, scr)
+        self.mode = m
+        if self.mode == 0:
+            with open('Rooms\\' + path, 'r') as file:
+                lines = file.readlines()
+                self.spawners = eval(lines[4])
+                del lines
+                file.close()
+            for i in self.spawners:
+                self.enemies.append(i)
+            self.rClocks = []
+            for i in range(len(regen)):
+                self.rClocks.append(0)
+            self.regens = regen
+            self.regenMax = rTime
+            self.head = self.enemies[head]
+            self.phases = phase
+            self.phaseTimer = pTime
+            self.phaseMax = pTime
+            self.currentPhase = 0
+            self.normalLen = len(self.enemies)
+            self.alive = True
+            self.bufferMax = buff
+            self.buffer = 0
+            self.perms = perm
+
+    def update(self, p1):
+        for i in self.tiles:
+            i.update()
+        for i in self.items:
+            i.update()
+        for i in self.doors:
+            i.update()
+        if self.buffer > 0 and self.alive:
+            self.buffer -= 1
+            if self.buffer == 0:
+                self.currentPhase += 1
+                if self.currentPhase == len(self.phases):
+                    self.currentPhase = 0
+                for i in self.enemies:
+                    if type(i) == Enemy:
+                        for j in i.projectiles:
+                            j.isShooting = False
+            for i in self.phases[self.currentPhase]:
+                self.enemies[i].sprite.update()
+            self.head.update(p1, self.tiles)
+            for i in self.perms:
+                if type(self.enemies[i]) == Enemy:
+                    self.enemies[i].update(p1, self.tiles)
+                else:
+                    self.enemies[i].update(self.tiles)
+            for i in range(self.normalLen, len(self.enemies)):
+                self.enemies[i].update(p1, self.tiles)
+            for i in self.enemies:
+                if type(i) == Enemy:
+                    for j in i.projectiles:
+                        j.update(self.tiles + [p1])
+        if self.alive and self.buffer == 0:
+            for i in self.phases[self.currentPhase]:
+                if type(self.enemies[i]) == Enemy:
+                    self.enemies[i].update(p1, self.tiles)
+                else:
+                    self.enemies[i].update(self.tiles)
+                if i in self.regens and self.rClocks[self.regens.index(i)] == 0 and not self.enemies[i].alive:
+                    self.rClocks[self.regens.index(i)] = self.regenMax
+            for i in range(self.normalLen, len(self.enemies)):
+                self.enemies[i].update(p1, self.tiles)
+            for i in self.spawners:
+                if i.checkFlag():
+                    e = i.getEnemy()
+                    pos = i.getPos()
+                    if type(e[0]) == list:
+                        sprites = []
+                        for i in e[0]:
+                            sprites.append(Sprite(i, pos[0], pos[1] - 1, e[1], e[2], e[3], self.screen))
+                        self.enemies.append(
+                            Enemy(sprites, e[4], e[5], e[6], e[7], e[8], e[9], e[10], e[11], [], [], e[13]))
+                    else:
+                        self.enemies.append(Enemy(Sprite(e[0], pos[0], pos[1] - 1, e[1], e[2], e[3], self.screen), e[4], e[5], e[6], e[7], e[8], e[9], e[10], e[11], [], [], e[13]))
+            self.head.update(p1, self.tiles)
+            for i in self.perms:
+                if type(self.enemies[i]) == Enemy:
+                    self.enemies[i].update(p1, self.tiles)
+                else:
+                    self.enemies[i].update(self.tiles)
+                if i in self.regens and self.rClocks[self.regens.index(i)] == 0 and not self.enemies[i].alive:
+                    self.rClocks[self.regens.index(i)] = self.regenMax
+            self.alive = self.head.alive
+            self.phaseTimer -= 1
+            if self.phaseTimer == 0:
+                self.phaseTimer = self.phaseMax
+                self.buffer = self.bufferMax
+                if self.currentPhase == len(self.phases):
+                    self.currentPhase = 0
+            for i in range(len(self.rClocks)):
+                if self.rClocks[i] > 0:
+                    self.rClocks[i] -= 1
+                    if self.rClocks[i] == 0:
+                        self.enemies[self.regens[i]].revive()
+
+    def returnAll(self):
+        return Room.returnAll(self) + self.spawners
+
+    def endRoom(self):
+        for i in self.enemies:
+            i.kill()
+        for i in self.spawners:
+            i.kill()
+        self.setDoors(True, False, False, False)
 
 class RoomArray:
 
@@ -280,6 +405,16 @@ class RoomArray:
 class Level:
 
     def __init__(self, l, p, c, d, b, dmg, spd, hel, s):
+        if p == 'CUSTOM':
+            self.setup = True
+            self.path = ''
+            self.rooms = []
+            self.specialRooms = []
+            self.layout = ''
+            self.roomArr = []
+            return
+        else:
+            self.setup = False
         self.path = 'Rooms\\' + p
         self.rooms = os.listdir(self.path)
         self.rooms.remove('Specials')
@@ -325,6 +460,9 @@ class Level:
             roomList.append([p + '\\' + self.randRoom(), temp[0], temp[1], 0])
         self.roomArr = RoomArray(roomList, b, dmg, spd, hel, s)
 
+    def manualSetup(self, rArr):
+        self.roomArr = rArr
+
     def randRoom(self):
         return self.rooms[random.randint(0, len(self.rooms) - 1)]
 
@@ -334,8 +472,15 @@ class Level:
     def seeRooms(self):
         print(self.rooms)
 
+    def showPath(self, x, y):
+        self.roomArr.currentRoom.showPath(x, y)
+
     def getCoords(self):
         return self.roomArr.coords
+
+    def drawCurrentCoords(self, x, y, scr):
+        t = Text('{} {}'.format(self.roomArr.currentCoords[0], self.roomArr.currentCoords[1]), x, y, (255, 255, 255), 2, scr)
+        t.update()
 
     def update(self, player):
         self.roomArr.update(player)
