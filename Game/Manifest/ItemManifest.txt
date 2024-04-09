@@ -11,3 +11,5 @@
 ['Items\\\\0chest.spr', (85, 114, 181), -1, 4, 'Random0', 0, False, False]
 ['Items\\\\coinspin.spr', (73, 255, 48), 8, 8, 'Money', 10, False, False]
 ['Items\\\\akimbo.spr', (100, 100, 100), -1, 4, 'ExtraShot', 1, True, False]
+['Items\\\\armor.spr', (100, 100, 100), -1, 4, 'ArmorB', 15, True, False]
+['Items\\\\70chest.spr', (85, 114, 181), -1, 4, 'Random70', 0, False, False]
