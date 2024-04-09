@@ -1,14 +1,12 @@
+import pygame
 from room import *
 from gameObject import *
-import pygame
 
 running = True
-p = 'bossRoom.room'
-# p = 'room9.txt'
 screen = pygame.display.set_mode([1024, 720], pygame.FULLSCREEN)
 p1 = Player(70, 270, screen)
 clock = pygame.time.Clock()
-room = Room(p, 0, (0, 0, 0), 1, 1, 1, screen)
+room = BossRoom('bossRoom.room', (0, 0, 0), 0, [[3, 4], [5, 6]], 600, [1, 2], [1, 2], 300, 0, 120, screen)
 p1.giveWeapon(Projectile(Sprite('block.spr', 0, 0, (255, 0, 0), -1, 1, screen), 12, 10, 10, False, True, False, 5, 10))
 while running:
     for event in pygame.event.get():
@@ -17,6 +15,7 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_BACKSPACE:
                 running = False
+    screen.fill((0, 0, 0))
     p1.takeInput(pygame.key.get_pressed())
     room.update(p1)
     p1.update(room.returnAll())

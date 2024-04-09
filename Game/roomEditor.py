@@ -44,6 +44,7 @@ def main():
     index = 0
     realX = 0
     realY = 0
+    spec = 0
     new = True
     with open('Manifest\\TileManifest.txt', 'r') as file:
         lines = file.readlines()
@@ -55,12 +56,12 @@ def main():
         for line in lines:
             items.append(ast.literal_eval(line))
         file.close()
+    counter = 0
     with open('Manifest\\EnemyManifest.txt', 'r') as file:
         lines = file.readlines()
         for line in lines:
             enemies.append(ast.literal_eval(line))
         file.close()
-
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -72,12 +73,19 @@ def main():
                     if mode == 'i':
                         board[realY][realX].append(['i', index, Sprite(items[index][0], realX * 64, realY * 64, items[index][1], items[index][2], items[index][3], screen)])
                     if mode == 'e':
-                        if enemies[index][5] == 4:
+                        if enemies[index][5] == 4 or enemies[index][5] == 5:
                             drawMode = False
                             points = []
                             pointSprites = []
                             tempX = realX
                             tempY = realY
+                            spec = enemies[index][5]
+                            if spec == 4:
+                                pointText = Text('enter/points/when/done/l for/loop/r for/reverse', 1024, 100,
+                                                 (255, 255, 255), 2, screen)
+                            if spec == 5:
+                                pointText = Text('enter/points/when/done/l to/leave', 1024, 100,
+                                                 (255, 255, 255), 2, screen)
                         else:
                             if type(enemies[index][0]) == list:
                                 board[realY][realX].append(['e', index, Sprite(enemies[index][0][0], realX * 64, realY * 64, enemies[index][1], enemies[index][2], enemies[index][3], screen)])
@@ -86,7 +94,7 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN and not drawMode:
                 if event.button == 1:
                     points.append([realX * 64, realY * 64])
-                    pointSprites.append(Sprite('smallBlock.txt', realX * 64, realY * 64, (255, 0, 0), -1, 8, screen))
+                    pointSprites.append(Sprite('smallBlock.spr', realX * 64, realY * 64, (255, 0, 0), -1, 8, screen))
                 elif event.button == 2:
                     points = []
                     pointSprites = []
@@ -94,9 +102,17 @@ def main():
                 if event.key == pygame.K_RIGHT:
                     if (mode == 't' and index != len(tiles) - 1) or (mode == 'i' and index != len(items) - 1) or (mode == 'e' and index != len(enemies) - 1):
                         index += 1
+                    else:
+                        index = 0
                 elif event.key == pygame.K_LEFT:
                     if index != 0:
                         index -= 1
+                    elif mode == 't':
+                        index = len(tiles) - 1
+                    elif mode == 'i':
+                        index = len(items) - 1
+                    elif mode == 'e':
+                        index = len(enemies) - 1
                 elif event.key == pygame.K_t:
                     mode = 't'
                     index = 0
@@ -250,16 +266,18 @@ def main():
                         file.write('{}\n{}\n{}\n{}'.format(tileIndex, saveTiles, saveItems, saveEnemies))
                         file.close()
             elif event.type == pygame.KEYDOWN and not drawMode:
-                if event.key == pygame.K_l:
+                if event.key == pygame.K_l and spec == 4:
                     points.append(0)
-                if event.key == pygame.K_r:
+                elif event.key == pygame.K_r and spec == 4:
                     points.append(1)
+                elif event.key == pygame.K_o and spec == 5:
+                    points.append([-128, -128])
                 if event.key == pygame.K_l or event.key == pygame.K_r:
                     drawMode = True
                     if type(enemies[index][0]) == list:
-                        board[realY][realX].append(['e', index, Sprite(enemies[index][0][0], tempX * 64, tempY * 64, enemies[index][1], -1, enemies[index][3], screen)] + [points])
+                        board[realY][realX].append(['e', index, Sprite(enemies[index][0][0], tempX * 64, tempY * 64, enemies[index][1], enemies[index][2], enemies[index][3], screen)] + [points])
                     else:
-                        board[realY][realX].append(['e', index, Sprite(enemies[index][0], tempX * 64, tempY * 64, enemies[index][1], -1, enemies[index][3], screen)] + [points])
+                        board[realY][realX].append(['e', index, Sprite(enemies[index][0], tempX * 64, tempY * 64, enemies[index][1], enemies[index][2], enemies[index][3], screen)] + [points])
         screen.fill((0, 0, 0))
         drawBG(screen)
         mouse_x, mouse_y = pygame.mouse.get_pos()
