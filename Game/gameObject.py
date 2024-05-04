@@ -10,7 +10,19 @@ itemPool = [[['Items\\\\pmed.spr', (119, 252, 96), -1, 4, 'Heal', 25, False, Tru
 ['Items\\\\speedup.spr', (255, 180, 115), -1, 4, 'SpeedB', .5, True, False],
 ['Items\\\\rangeup.spr', (87, 9, 85), -1, 4, 'RangeB', 10, True, False],
 ['Items\\\\akimbo.spr', (100, 100, 100), -1, 4, 'ExtraShot', 1, True, False],
-['Items\\\\armor.spr', (100, 100, 100), -1, 4, 'ArmorB', 15, True, False]]]
+['Items\\\\armor.spr', (100, 100, 100), -1, 4, 'ArmorB', 15, True, False],
+['Items\\\\sword.spr', (153, 0, 0), -1, 4, 'DamageB', 5, True, False],
+['Items\\\\map.spr', (177, 2, 204), -1, 4, 'Map', 1, False, True],
+['Items\\\\stitches.spr', (255, 255, 255), -1, 4, 'SlowDecay', 60, True, False],
+['Items\\\\moneybag.spr', (153, 102, 0), -1, 4, 'Money', 150, False, False],
+['Items\\\\bomb.spr', (100, 100, 100), -1, 4, 'Clear', 1, False, True]],
+[['Items\\\\gun.spr', (0, 0, 128), -1, 4, 'SuperShot', 1, True, False],
+['Items\\\\invis.spr', (255, 255, 255), -1, 4, 'TempInvis', 1, False, True],
+['Items\\\\atomizer.spr', (102, 230, 255), 5, 4, 'PermClear', 1, False, True],
+['Items\\\\nope.spr', (255, 0, 0), -1, 4, 'Skip', 1, False, False],
+['Items\\\\hpup.spr', (255, 255, 51), -1, 4, 'HealthB', 60, True, False],
+['Items\\\\moneybag.spr', (255, 238, 0), -1, 4, 'Money', 500, False, False],
+['Items\\\\cannon.spr', (200, 200, 200), -1, 4, 'CannonShot', 1, True, False]]]
 
 
 def randItem(pool, scr):
@@ -199,18 +211,30 @@ class Player(GameObject):
         self.speed = 3
         self.hold = [False, False, 0]
         self.wasd = False
+        self.controller = False
         self.armor = 1
         self.itemTimer = 0
         self.currentItem = ''
-        self.flags = [False, False]
+        self.flags = [False, False, False]
         self.queue = []
         self.message = ''
         self.messageTimer = 0
+        self.score = 0
+        self.decay = 300
+        self.decayMax = 300
         GameObject.__init__(self, self.sprites[0], False, 100, False, 30)
 
     def takeInput(self, keys):
         currentFacing = self.facing
         currentMove = self.moving
+        if self.controller:
+            right = 0
+            left = 1
+            up = 2
+            down = 3
+            fire = 4
+            use = 5
+            change = 6
         if not self.wasd:
             right = pygame.K_RIGHT
             left = pygame.K_LEFT
@@ -332,6 +356,8 @@ class Player(GameObject):
             self.exitRoom = True
         elif purpose == 'Clear':
             self.flags[1] = True
+        elif purpose == 'PermClear':
+            self.flags[2] = True
 
     def damage(self, x):
         if self.currentItem != 'TempInvis':
@@ -432,6 +458,8 @@ class Player(GameObject):
             i.updateColor(c)
 
     def update(self, objs):
+        if not self.alive:
+            return
         if self.newSprite:
             pos = self.sprite.getPos()
             if self.moving:
@@ -525,6 +553,15 @@ class Player(GameObject):
                             if self.armor < .2:
                                 self.armor = .2
                         self.addMessage('got armor')
+                    elif purpose == 'SuperShot':
+                        self.giveWeapon(Projectile(Sprite('block.spr', 0, 0, (0, 0, 255), -1, 1, self.sprite.screen), 60, 15, 20, False, True, False, 5, 10))
+                        self.addMessage('got an extra shot')
+                    elif purpose == 'SlowDecay':
+                        self.decayMax += amount
+                        self.addMessage('life retention up')
+                    elif purpose == 'CannonShot':
+                        self.giveWeapon(Projectile(Sprite('block.spr', 0, 0, (200, 200, 200), -1, 4, self.sprite.screen), 16, 8, 40, False, True, False, 10, 10))
+                        self.addMessage('life retention up')
                     i.kill()
                 else:
                     self.inventory.addItem(i)
@@ -532,10 +569,15 @@ class Player(GameObject):
         self.move(-self.xVel, -self.yVel)
         for i in self.weapons:
             i.update(objs)
-            self.inventory.money += i.takeMoney()
+            money = i.takeMoney()
+            self.inventory.money += money
+            self.score += money * 10
         if self.itemTimer > 0:
             self.itemTimer -= 1
+            if self.currentItem == 'TempInvis' and not self.exitRoom:
+                self.changeColor((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
             if self.itemTimer == 0:
+                self.changeColor((255, 255, 255))
                 self.currentItem = ''
         if self.messageTimer > 0:
             self.messageTimer -= 1
@@ -545,6 +587,13 @@ class Player(GameObject):
             if len(self.queue) != 0:
                 self.message = self.queue.pop(0)
                 self.messageTimer = 120
+        if self.decay == 0:
+            if self.health > 1:
+                self.health -= 1
+            self.decay = self.decayMax
+        else:
+            self.decay -= 1
+        self.score += self.inventory.getScore() * 10
         GameObject.update(self, objs)
 
 
@@ -627,7 +676,6 @@ class Enemy(GameObject):
         self.mType = moveType
         makeSolid = False
         if self.mType >= 100:
-            print('solid attempted')
             makeSolid = True
             self.mType -= 100
         self.speed = speed
@@ -1055,6 +1103,9 @@ class Projectile(GameObject):
                         i.damage(self.hitDamage)
                         i.setKnockback(self.knock[0], self.knock[1], self.knockFrames)
                         self.isShooting = False
+                    pos = self.getPos()
+                    if pos[0] < 0 or pos[1] < 0 or pos[0] > 1024 or pos[1] > 576:
+                        self.isShooting = False
             self.quickUpdate()
 
 
@@ -1131,6 +1182,11 @@ class Inventory:
         else:
             self.inventory[self.index][1] -= 1
         return item
+
+    def getScore(self):
+        temp = self.scoreToCollect
+        self.scoreToCollect = 0
+        return temp
 
     def peekItem(self):
         if self.index == -1:

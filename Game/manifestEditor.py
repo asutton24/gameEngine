@@ -35,7 +35,7 @@ def main():
             file.write(str([path, color, animated, scale, purpose, amount, boost, stack]))
             file.write('\n')
     if inp == 'e':
-        faceType = int(input('What rotation sprites are there? 1 for single sprite, 2 for left/right, 3 for up/down 4 for all 4 directions: '))
+        faceType = int(input('What rotation type? 1 for single sprite, 2 for left/right, 3 for up/down 4 for all 4 directions: '))
         moveType = int(input('What movement type? 0 for stationary, 1 for chase, 2 for random, 3 for biased random, 4 for set path, 5 for point rotation, add 100 to make a solid enemy'))
         speed = int(input('Enemy speed?: '))
         if moveType == 2 or moveType == 3:
