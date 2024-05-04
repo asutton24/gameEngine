@@ -230,7 +230,7 @@ class BossRoom(Room):
             self.normalLen = len(self.enemies)
             self.alive = True
             self.bufferMax = buff
-            self.buffer = 0
+            self.buffer = buff
             self.perms = perm
 
     def update(self, p1):
@@ -307,6 +307,11 @@ class BossRoom(Room):
                     if self.rClocks[i] == 0:
                         self.enemies[self.regens[i]].revive()
 
+    def drawBossHp(self, x, y, scr):
+        pygame.draw.rect(scr, (255, 255, 255), [x, y, 200, 30])
+        pygame.draw.rect(scr, (0, 0, 0), [x + 5, y + 5, 190, 20])
+        pygame.draw.rect(scr, (0, 0, 255), [x + 5, y + 5, int(190 * self.head.health / self.head.maxHP), 20])
+
     def returnAll(self):
         return Room.returnAll(self) + self.spawners
 
@@ -316,6 +321,7 @@ class BossRoom(Room):
         for i in self.spawners:
             i.kill()
         self.setDoors(True, False, False, False)
+
 
 class RoomArray:
 

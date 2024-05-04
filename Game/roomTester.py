@@ -3,8 +3,7 @@ from gameObject import *
 import pygame
 
 running = True
-p = 'bossRoom.room'
-# p = 'room9.txt'
+p = 'room9.txt'
 screen = pygame.display.set_mode([1024, 720], pygame.FULLSCREEN)
 p1 = Player(70, 270, screen)
 clock = pygame.time.Clock()
