@@ -5,15 +5,18 @@ from gameObject import *
 global joystick
 
 
-def getLevel(x, scr):
+def getLevel(x, scr, f):
+    oldX = x
+    if x > 5:
+        x = (x % 5) + 1
     if x == 1:
-        return Level([5, .05, .1, .5, .25, 10, 4, 14], 'Level1', 1, .5, (0, 0, 0), 1, 1,1, scr)
+        return Level([5, .05, .1, .5, .25, 10, 4, 14], 'Level1', 1, .5, (0, 0, 0), 1 * f, 1 * f, 1 * f, scr)
     if x == 2:
-        return Level([8, .08, .15, .5, .25, 14, 4, 18], 'Level2', 1, .5, (0, 0, 0), 1.2, 1, 1.2, scr)
+        return Level([8, .08, .15, .5, .25, 14, 4, 18], 'Level2', 1, .5, (0, 0, 0), 1.2 * f, 1 * f, 1.2 * f, scr)
     if x == 3:
-        return Level([10, .08, .3, .6, .25, 16, 4, 20], 'Level3', 1, .5, (0, 0, 0), 1.3, 1.15, 1.3, scr)
+        return Level([10, .08, .3, .6, .25, 16, 4, 20], 'Level3', 1, .5, (0, 0, 0), 1.3 * f, 1.15 * f, 1.3 * f, scr)
     if x == 4:
-        return Level([10, .08, .3, .6, .25, 16, 4, 20], 'Level4', 1, .5, (0, 0, 0), 1.3, 1.2, 1.4, scr)
+        return Level([10, .08, .3, .6, .25, 16, 4, 20], 'Level4', 1, .5, (0, 0, 0), 1.3 * f, 1.2 * f, 1.4 * f, scr)
     if x == 5:
         lev = Level([], 'CUSTOM', 0, 0, (0, 0, 0), 0, 0, 0, scr)
         lev.manualSetup(RoomArray([['Level5\\l5r1.room', 0, 0, 0], ['Level5\\l5r2.room', 1, 0, 0], ['Level5\\l5r3.room', 2, 0, 0]], (0, 0, 0), 1, 1, 1, scr))
@@ -208,10 +211,10 @@ def settings(screen, current, fs):
 def home(screen, controls, high):
     running = True
     selection = 0
-    name = 'one way out'
+    name = 'title'
     score = Text('High score- {}'.format(high), 512 - len('High score- {}'.format(high)) * 16, 50, (255, 255, 255), 4, screen)
     title = Text(name, 512 - len(name) * 40, 150, (255, 255, 255), 10, screen)
-    labels = ['play', 'help', 'quit']
+    labels = ['play', 'settings', 'quit']
     options = []
     y = 300
     for i in labels:
@@ -232,6 +235,8 @@ def home(screen, controls, high):
     wait = 11
     while wait != 0:
         for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return -1
             if event.type == pygame.KEYDOWN:
                 if event.key == select:
                     wait -= 1
@@ -266,7 +271,7 @@ def home(screen, controls, high):
 
 def doBossFight(p1, screen):
     p1.changeColor((255, 255, 255))
-    boss = BossRoom('bossRoom.room', (0, 0, 0), 0, [[3, 4], [5, 6]], 600, [1, 2], [1, 2], 300, 0, 180, screen)
+    boss = BossRoom('bossRoom.room', (0, 0, 0), 0, [[3, 4, 5, 6], [7, 8]], 600, [1, 2], [1, 2], 300, 0, 180, screen)
     clock = pygame.time.Clock()
     running = True
     end = 0
@@ -338,14 +343,15 @@ def doBossFight(p1, screen):
     return 1
 
 
-def run(screen, controls):
+def run(screen, controls, cheats):
     running = True
     forceQuit = False
     interlude = True
     p1 = Player(500, 250, screen)
     currentLevel = 1
     clock = pygame.time.Clock()
-    level = getLevel(currentLevel, screen)
+    factor = 1
+    level = getLevel(currentLevel, screen, 1)
     ret = 1
     doBoss = 0
     isGameComplete = False
@@ -367,6 +373,8 @@ def run(screen, controls):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         forceQuit = True
+                    if event.key == pygame.K_r and cheats == 0:
+                        p1.map = level.getCoords()
                     if event.key == pygame.K_p:
                         pause = True
                         while pause:
@@ -380,6 +388,11 @@ def run(screen, controls):
                                     if e.key == pygame.K_p:
                                         pause = False
                             clock.tick(60)
+                    if event.key == pygame.K_o and cheats == 0:
+                        isLevelComplete = True
+                        p1.resetMap()
+                    if event.key == pygame.K_m and cheats == 0:
+                        p1.inventory.money += 100
             flags = p1.getFlags()
             if flags[0]:
                 p1.map = level.getCoords()
@@ -446,10 +459,12 @@ def run(screen, controls):
             interlude = False
             endScreen(screen)
             ret = deathScreen(screen, p1.score, 1, controls)
-        if currentLevel == 6 or not p1.alive:
+        if currentLevel > 1 and currentLevel % 5 == 1:
+            factor += 0.5
+        if not p1.alive or isGameComplete:
             running = False
             interlude = False
-        level = getLevel(currentLevel, screen)
+        level = getLevel(currentLevel, screen, factor)
         items = []
         for i in range(3):
             unique = False
@@ -522,5 +537,5 @@ def run(screen, controls):
                 i.update()
             pygame.display.update()
             clock.tick(60)
-    return p1.score * 10 * (not forceQuit) + ret
+    return p1.score * 10 * (not forceQuit) * cheats + ret
 
