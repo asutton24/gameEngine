@@ -22,10 +22,16 @@ def main():
     controls = int.from_bytes(data1, 'little')
     score = int.from_bytes(data2, 'little')
     full = int.from_bytes(data3, 'little')
+    if full == 66 or full == 67:
+        full -= 66
+        cheats = 0
+    else:
+        cheats = 1
     if full == 1:
         screen = pygame.display.set_mode([1024, 768], pygame.FULLSCREEN)
     else:
         screen = pygame.display.set_mode([1024, 768])
+    pygame.display.set_caption(' ')
     pygame.init()
     pygame.joystick.init()
     if quickStart:
@@ -34,10 +40,12 @@ def main():
     while running:
         if not restart:
             status = game.home(screen, controls, score)
+            if status == -1:
+                running = False
         else:
             restart = False
         if status == 0:
-            status = game.run(screen, controls)
+            status = game.run(screen, controls, cheats)
             if int(status / 10) > score:
                 score = int(status / 10)
             status %= 10
