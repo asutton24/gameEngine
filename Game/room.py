@@ -4,6 +4,7 @@ from gameObject import *
 import pygame
 import random
 import math
+from sprite import control
 
 
 def distance(x1, y1, x2, y2):
@@ -90,8 +91,11 @@ class Room:
         self.damageF = d
         self.speedF = s
         self.healthF = h
-        self.path = path
-        with open('Rooms\\' + path, 'r') as file:
+        if control == '/':
+            self.path = path.replace('\\', '/')
+        else:
+            self.path = path
+        with open('Rooms' + control + self.path, 'r') as file:
             lines = file.readlines()
             counter = 0
             for line in lines:
@@ -193,7 +197,7 @@ class Room:
     def showPath(self, x, y):
         newP = ''
         for i in range(len(self.path)):
-            if self.path[i] == '\\':
+            if self.path[i] == control:
                 newP += '|'
             else:
                 newP += self.path[i]
@@ -210,7 +214,7 @@ class BossRoom(Room):
         Room.__init__(self, path, 0, b, 1, 1, 1, scr)
         self.mode = m
         if self.mode == 0:
-            with open('Rooms\\' + path, 'r') as file:
+            with open('Rooms' + control + self.path, 'r') as file:
                 lines = file.readlines()
                 self.spawners = eval(lines[4])
                 del lines
@@ -421,15 +425,17 @@ class Level:
             return
         else:
             self.setup = False
-        self.path = 'Rooms\\' + p
+        if control == '/':
+            p = p.replace('\\', '/')
+        self.path = 'Rooms' + control + p
         self.rooms = os.listdir(self.path)
         self.rooms.remove('Specials')
-        self.specialRooms = os.listdir(self.path + '\\Specials')
+        self.specialRooms = os.listdir(self.path + control + 'Specials')
         self.specialRooms.remove('Start.room')
         self.specialRooms.remove('Exit.room')
         self.specialRooms.remove('ExitKeyRoom.room')
         if str == type(l):
-            with open('Levels\\' + l, 'r') as file:
+            with open('Levels' + control + l, 'r') as file:
                 lines = file.readlines()
                 self.layout = lines[random.randint(0, len(lines) - 1)]
                 file.close()
@@ -441,12 +447,12 @@ class Level:
         xOff, yOff = self.layout.index('S') % 24, int(self.layout.index('S') / 24)
         roomList = []
         specials = []
-        roomList.append([p + '\\Specials\\Start.room', 0, 0, 0])
+        roomList.append([p + control + 'Specials' + control + 'Start.room', 0, 0, 0])
         x = 0
         y = 0
         for i in self.layout:
             if i == 'N':
-                roomList.append([p + '\\' + self.randRoom(), x - xOff, y - yOff, 0])
+                roomList.append([p + control + self.randRoom(), x - xOff, y - yOff, 0])
             if i == 'U':
                 specials.append([x - xOff, y - yOff])
             x += 1
@@ -454,16 +460,16 @@ class Level:
                 y += 1
                 x = 0
         temp = specials.pop(random.randint(0, len(specials) - 1))
-        roomList.append([p + '\\Specials\\ExitKeyRoom.room', temp[0], temp[1], 0])
+        roomList.append([p + control + 'Specials' + control + 'ExitKeyRoom.room', temp[0], temp[1], 0])
         temp = specials.pop(random.randint(0, len(specials) - 1))
-        roomList.append([p + '\\Specials\\Exit.room', temp[0], temp[1], 1])
+        roomList.append([p + control + 'Specials' + control + 'Exit.room', temp[0], temp[1], 1])
         while len(specials) > 0 and random.random() < c:
             temp = specials.pop(random.randint(0, len(specials) - 1))
-            roomList.append([p + '\\Specials\\' + self.randSpecialRoom(), temp[0], temp[1], 0])
+            roomList.append([p + control + 'Specials' + control + self.randSpecialRoom(), temp[0], temp[1], 0])
             c *= d
         while len(specials) > 0:
             temp = specials.pop(0)
-            roomList.append([p + '\\' + self.randRoom(), temp[0], temp[1], 0])
+            roomList.append([p + control + self.randRoom(), temp[0], temp[1], 0])
         self.roomArr = RoomArray(roomList, b, dmg, spd, hel, s)
 
     def manualSetup(self, rArr):

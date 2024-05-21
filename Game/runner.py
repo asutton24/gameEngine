@@ -34,9 +34,13 @@ def main():
     pygame.display.set_caption(' ')
     pygame.init()
     pygame.joystick.init()
+    if pygame.joystick.get_count() > 0:
+        js = pygame.joystick.Joystick(0)
+        js.init()
+        controls += 2
     if quickStart:
         running = False
-        game.run(screen, controls)
+        game.run(screen, controls, cheats)
     while running:
         if not restart:
             status = game.home(screen, controls, score)
@@ -64,6 +68,10 @@ def main():
             controls = status % 10
         elif status == 2:
             running = False
+    if cheats == 0:
+        full += 66
+    if controls > 1:
+        controls -= 2
     with open('data.bin', 'wb') as file:
         pass
         file.close()

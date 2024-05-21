@@ -1,8 +1,25 @@
 import pygame
 from room import *
 from gameObject import *
-
+from sprite import control
 global joystick
+
+
+def getControllerInput():
+    d = {}
+    js = pygame.joystick.Joystick(0)
+    dpad = js.get_hat(0)
+    axis = [js.get_axis(0), js.get_axis(1)]
+    d[pygame.K_RIGHT] = dpad[0] == 1 or axis[0] > 0.5
+    d[pygame.K_LEFT] = dpad[0] == -1 or axis[0] < -0.5
+    d[pygame.K_UP] = dpad[1] == 1 or axis[1] < -0.5
+    d[pygame.K_DOWN] = dpad[1] == -1 or axis[1] > 0.5
+    d[pygame.K_z] = js.get_button(0)
+    d[pygame.K_x] = js.get_button(1)
+    d[pygame.K_c] = js.get_button(3)
+    d[pygame.K_ESCAPE] = js.get_button(6)
+    d[pygame.K_p] = js.get_button(7)
+    return d
 
 
 def getLevel(x, scr, f):
@@ -83,7 +100,8 @@ def deathScreen(screen, score, state, controls):
             Text(options[1], 512 - len(options[1]) * 16, 410, (255, 255, 255), 4, screen)]
     running = True
     pointer = Sprite('block.spr', 320, 370, (255, 0, 0), -1, 4, screen)
-    if controls == 0:
+    last = 0
+    if controls == 0 or controls > 1:
         up = pygame.K_UP
         down = pygame.K_DOWN
         select = pygame.K_z
@@ -91,6 +109,7 @@ def deathScreen(screen, score, state, controls):
         up = pygame.K_w
         down = pygame.K_s
         select = pygame.K_k
+    controller = controls > 1
     selection = 0
     while running:
         for event in pygame.event.get():
@@ -104,6 +123,20 @@ def deathScreen(screen, score, state, controls):
                     else:
                         selection = 0
                         pointer.y = 370
+        if controller:
+            keys = getControllerInput()
+            if keys[select]:
+                running = False
+            if (keys[up] or keys[down]) and last == 0:
+                if selection == 0:
+                    selection = 1
+                    pointer.y = 410
+                else:
+                    selection = 0
+                    pointer.y = 370
+                last = 1
+            if not (keys[up] or keys[down]):
+                last = 0
         pygame.draw.rect(screen, (255, 255, 255), [262, 184, 500, 400])
         pygame.draw.rect(screen, (0, 0, 0), [267, 189, 490, 390])
         for i in text:
@@ -122,7 +155,7 @@ def endScreen(screen):
     running = True
     frameCount = 0
     teleporter = Sprite('exit.spr', 960, 352, (0, 0, 0), -1, 4, screen)
-    player = Sprite('Player\\playerIdle.spr', 968, 360, (255, 255, 255), -1, 6, screen)
+    player = Sprite('Player' + control + 'playerIdle.spr', 968, 360, (255, 255, 255), -1, 6, screen)
     color = 254
     while color != 0:
         for event in pygame.event.get():
@@ -134,7 +167,7 @@ def endScreen(screen):
         if 60 <= frameCount <= 315:
             teleporter.updateColor((frameCount - 60, frameCount - 60, frameCount - 60))
         if frameCount == 375:
-            player = Sprite('Player\\playerMoveL.spr', 960, 360, (255, 255, 255), 3, 6, screen)
+            player = Sprite('Player' + control + 'playerMoveL.spr', 960, 360, (255, 255, 255), 3, 6, screen)
         if frameCount >= 376:
             player.x -= 3
         if frameCount >= 590:
@@ -156,15 +189,22 @@ def endScreen(screen):
 
 def settings(screen, current, fs):
     instructText = 'How to play'
-    controlsText = ['Arrow Keys to move/z to attack/x to use an item/c to cycle through items/p to pause',
-                    'wasd to move/k to attack/l to use an item/semicolon to cycle through items/p to pause']
-    controlType = Text(controlsText[current], 100, 100, (255, 255, 255), 3, screen)
-    select = Text('toggle controls/toggle fullscreen', 300, 500, (255, 255, 255), 4, screen)
+    if current < 2:
+        controlsText = ['Arrow Keys to move/z to attack/x to use an item/c to cycle through items/p to pause',
+                        'wasd to move/k to attack/l to use an item/semicolon to cycle through items/p to pause']
+        controlType = Text(controlsText[current], 100, 100, (255, 255, 255), 3, screen)
+    else:
+        controlType = Text('dpad or left stick to move/a to attack/b to use an item/y to cycle through items/start to pause', 100, 100, (255, 255 ,255), 3, screen)
+    if current > 1:
+        stext = 'toggle fullscreen'
+    else:
+        stext = 'toggle controls/toggle fullscreen'
+    select = Text(stext, 300, 500, (255, 255, 255), 4, screen)
     pointer = Sprite('block.spr', 260, 500, (255, 0, 0), -1, 4, screen)
     running = True
     clock = pygame.time.Clock()
     selection = 0
-    if current == 0:
+    if current == 0 or current > 1:
         up = pygame.K_UP
         down = pygame.K_DOWN
         s = pygame.K_z
@@ -172,11 +212,12 @@ def settings(screen, current, fs):
         up = pygame.K_w
         down = pygame.K_s
         s = pygame.K_k
+    controller = current > 1
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return -1
-            if event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN and not controller:
                 if event.key == s:
                     if selection == 0:
                         current += 1
@@ -199,6 +240,17 @@ def settings(screen, current, fs):
                         pointer.y = 500
                 if event.key == pygame.K_ESCAPE:
                     running = False
+        if controller:
+            keys = getControllerInput()
+            if keys[s]:
+                if fs == 0:
+                    fs = 1
+                    screen = pygame.display.set_mode([1024, 768], pygame.FULLSCREEN)
+                else:
+                    fs = 0
+                    screen = pygame.display.set_mode([1024, 768])
+            if keys[pygame.K_ESCAPE]:
+                running = False
         screen.fill((0, 0, 0))
         controlType.update()
         select.update()
@@ -209,8 +261,6 @@ def settings(screen, current, fs):
 
 
 def home(screen, controls, high):
-    running = True
-    selection = 0
     name = 'title'
     score = Text('High score- {}'.format(high), 512 - len('High score- {}'.format(high)) * 16, 50, (255, 255, 255), 4, screen)
     title = Text(name, 512 - len(name) * 40, 150, (255, 255, 255), 10, screen)
@@ -220,9 +270,10 @@ def home(screen, controls, high):
     for i in labels:
         options.append(Text(i, 512 - len(i) * 20, y, (255, 255, 255), 5, screen))
         y += 90
-    icon = Sprite('Player\\playerIdle.spr', 300, 300, (255, 255, 255), -1, 5, screen)
+    icon = Sprite('Player' + control + 'playerIdle.spr', 300, 300, (255, 255, 255), -1, 5, screen)
     clock = pygame.time.Clock()
     selection = 0
+    last = 0
     if controls == 1:
         select = pygame.K_k
         up = pygame.K_w
@@ -231,6 +282,7 @@ def home(screen, controls, high):
         select = pygame.K_z
         up = pygame.K_UP
         down = pygame.K_DOWN
+    controller = controls > 1
     stop = pygame.K_ESCAPE
     wait = 11
     while wait != 0:
@@ -256,6 +308,29 @@ def home(screen, controls, high):
                     else:
                         icon.y -= 90
                         selection -= 1
+        if controller:
+            keys = getControllerInput()
+            if keys[select] and last != select:
+                wait -= 1
+                last = select
+            elif keys[down] and last != down:
+                if selection == 2:
+                    icon.y = 300
+                    selection = 0
+                else:
+                    icon.y += 90
+                    selection += 1
+                last = down
+            elif keys[up] and last != up:
+                if selection == 0:
+                    icon.y = 480
+                    selection = 2
+                else:
+                    icon.y -= 90
+                    selection -= 1
+                last = up
+            if not (keys[up] or keys[down] or keys[select]):
+                last = 0
         if wait <= 10:
             wait -= 1
         screen.fill((0, 0, 0))
@@ -292,6 +367,8 @@ def doBossFight(p1, screen):
                             elif e.type == pygame.KEYDOWN:
                                 if e.key == pygame.K_p:
                                     pause = False
+                                if e.key == pygame.K_ESCAPE:
+                                    return -1
                         clock.tick(60)
         if not boss.head.alive:
             end += 1
@@ -330,7 +407,22 @@ def doBossFight(p1, screen):
             if exit <= 0:
                 running = False
         screen.fill((0, 0, 0))
-        p1.takeInput(pygame.key.get_pressed())
+        if p1.controller:
+            keys = getControllerInput()
+            if keys[pygame.K_p]:
+                pause = True
+                while pause:
+                    keys = getControllerInput()
+                    if keys[pygame.K_p]:
+                        pause = False
+                    elif keys[pygame.K_ESCAPE]:
+                       return -1
+                    clock.tick(60)
+            elif keys[pygame.K_ESCAPE]:
+                return -1
+            p1.takeInput(keys)
+        else:
+            p1.takeInput(pygame.key.get_pressed())
         boss.update(p1)
         p1.update(boss.returnAll())
         p1.drawHealthBar(64, 620, screen)
@@ -357,7 +449,6 @@ def run(screen, controls, cheats):
     isGameComplete = False
     if controls == 2:
         p1.controller = True
-        joystick = pygame.joystick.Joystick(0)
     p1.giveWeapon(Projectile(Sprite('block.spr', 0, 0, (255, 0, 0), -1, 1, screen), 12, 10, 10, False, True, False, 5, 10))
     while running and not forceQuit:
         p1.updatePos(500, 250)
@@ -401,10 +492,24 @@ def run(screen, controls, cheats):
             if flags[2]:
                 level.roomArr.currentRoom.enemiesBackup = '[]'
             if p1.controller:
-                inp = []
-                for i in range(joystick.get_numbuttons()):
-                    inp.append(joystick.get_button(i))
-                p1.takeInput(inp)
+                keys = getControllerInput()
+                if keys[pygame.K_p]:
+                    pause = True
+                    while pause:
+                        keys = getControllerInput()
+                        if keys[pygame.K_p]:
+                            pause = False
+                        elif keys[pygame.K_ESCAPE]:
+                            pause = False
+                            isLevelComplete = True
+                            running = False
+                            forceQuit = True
+                        clock.tick(60)
+                elif keys[pygame.K_ESCAPE]:
+                    forceQuit = True
+                    isLevelComplete = True
+                    running = False
+                p1.takeInput(keys)
             else:
                 p1.takeInput(pygame.key.get_pressed())
             level.update(p1)
@@ -486,7 +591,8 @@ def run(screen, controls, cheats):
                Text("pick an item", 512 - len("pick an item") * 8, 170, (255, 255, 255), 2, screen), 0, 0]
         index = 0
         finished = 121
-        if controls == 0:
+        last = 0
+        if controls == 0 or p1.controller:
             left = pygame.K_LEFT
             right = pygame.K_RIGHT
             s = pygame.K_z
@@ -511,6 +617,22 @@ def run(screen, controls, cheats):
                         finished = 120
                     elif event.key == pygame.K_ESCAPE:
                         forceQuit = True
+            if p1.controller and finished == 121:
+                keys = getControllerInput()
+                if keys[right] and last != right:
+                    index += 1
+                    if index == 3:
+                        index = 0
+                    last = right
+                elif keys[left] and last != left:
+                    index -= 1
+                    if index == -1:
+                        index = 2
+                    last = left
+                elif keys[s] and last != s:
+                    finished = 120
+                if not (keys[right] or keys[left] or keys[s]):
+                    last = 0
             screen.fill((0, 0, 0))
             pur = items[index].getPurpose()[0]
             amo = items[index].getPurpose()[1]
