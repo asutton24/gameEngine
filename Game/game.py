@@ -380,9 +380,9 @@ def doBossFight(p1, screen):
                     while pause:
                         for e in pygame.event.get():
                             if e.type == pygame.JOYBUTTONDOWN:
-                                if event.button == 6:
+                                if e.button == 6:
                                     return -1
-                                elif event.button == 7:
+                                elif e.button == 7:
                                     pause = False
                             clock.tick(60)
         if not boss.head.alive:
@@ -493,10 +493,10 @@ def run(screen, controls, cheats):
                         while pause:
                             for e in pygame.event.get():
                                 if e.type == pygame.JOYBUTTONDOWN:
-                                    if event.button == 6:
+                                    if e.button == 6:
                                         forceQuit = True
                                         pause = False
-                                    elif event.button == 7:
+                                    elif e.button == 7:
                                         pause = False
                                 clock.tick(60)
             flags = p1.getFlags()
