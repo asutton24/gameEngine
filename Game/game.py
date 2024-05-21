@@ -25,7 +25,9 @@ def getControllerInput():
 def getLevel(x, scr, f):
     oldX = x
     if x > 5:
-        x = (x % 5) + 1
+        x = (x % 5)
+        if x == 0:
+            x = 5
     if x == 1:
         return Level([5, .05, .1, .5, .25, 10, 4, 14], 'Level1', 1, .5, (0, 0, 0), 1 * f, 1 * f, 1 * f, scr)
     if x == 2:
@@ -370,6 +372,19 @@ def doBossFight(p1, screen):
                                 if e.key == pygame.K_ESCAPE:
                                     return -1
                         clock.tick(60)
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 6:
+                    return -1
+                elif event.button == 7:
+                    pause = True
+                    while pause:
+                        for e in pygame.event.get():
+                            if e.type == pygame.JOYBUTTONDOWN:
+                                if event.button == 6:
+                                    return -1
+                                elif event.button == 7:
+                                    pause = False
+                            clock.tick(60)
         if not boss.head.alive:
             end += 1
         if end == 1:
@@ -408,19 +423,7 @@ def doBossFight(p1, screen):
                 running = False
         screen.fill((0, 0, 0))
         if p1.controller:
-            keys = getControllerInput()
-            if keys[pygame.K_p]:
-                pause = True
-                while pause:
-                    keys = getControllerInput()
-                    if keys[pygame.K_p]:
-                        pause = False
-                    elif keys[pygame.K_ESCAPE]:
-                       return -1
-                    clock.tick(60)
-            elif keys[pygame.K_ESCAPE]:
-                return -1
-            p1.takeInput(keys)
+            p1.takeInput(getControllerInput())
         else:
             p1.takeInput(pygame.key.get_pressed())
         boss.update(p1)
@@ -472,8 +475,6 @@ def run(screen, controls, cheats):
                             for e in pygame.event.get():
                                 if e.type == pygame.QUIT:
                                     pause = False
-                                    isLevelComplete = True
-                                    running = False
                                     forceQuit = True
                                 elif e.type == pygame.KEYDOWN:
                                     if e.key == pygame.K_p:
@@ -484,6 +485,20 @@ def run(screen, controls, cheats):
                         p1.resetMap()
                     if event.key == pygame.K_m and cheats == 0:
                         p1.inventory.money += 100
+                if event.type == pygame.JOYBUTTONDOWN:
+                    if event.button == 6:
+                        forceQuit = True
+                    elif event.button == 7:
+                        pause = True
+                        while pause:
+                            for e in pygame.event.get():
+                                if e.type == pygame.JOYBUTTONDOWN:
+                                    if event.button == 6:
+                                        forceQuit = True
+                                        pause = False
+                                    elif event.button == 7:
+                                        pause = False
+                                clock.tick(60)
             flags = p1.getFlags()
             if flags[0]:
                 p1.map = level.getCoords()
@@ -492,24 +507,7 @@ def run(screen, controls, cheats):
             if flags[2]:
                 level.roomArr.currentRoom.enemiesBackup = '[]'
             if p1.controller:
-                keys = getControllerInput()
-                if keys[pygame.K_p]:
-                    pause = True
-                    while pause:
-                        keys = getControllerInput()
-                        if keys[pygame.K_p]:
-                            pause = False
-                        elif keys[pygame.K_ESCAPE]:
-                            pause = False
-                            isLevelComplete = True
-                            running = False
-                            forceQuit = True
-                        clock.tick(60)
-                elif keys[pygame.K_ESCAPE]:
-                    forceQuit = True
-                    isLevelComplete = True
-                    running = False
-                p1.takeInput(keys)
+                p1.takeInput(getControllerInput())
             else:
                 p1.takeInput(pygame.key.get_pressed())
             level.update(p1)
