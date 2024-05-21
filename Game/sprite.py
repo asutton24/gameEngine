@@ -1,5 +1,15 @@
 import ast
 import pygame
+from os import name
+
+
+global control
+
+
+if name == 'nt':
+    control = '\\'
+elif name == 'posix':
+    control = '/'
 
 
 class Sprite:
@@ -7,19 +17,23 @@ class Sprite:
     def __init__(self, path, x, y, c, a, s, scr):
         self.x = x
         self.y = y
-        self.path = path
+        if control == '/':
+            self.path = path.replace('\\', '/')
+        else:
+            self.path = path
         self.animated = a
         self.frameTick = a
         self.currentFrame = 0
         self.scale = s
         self.color = c
         self.screen = scr
+        self.invis = False
         if path == 'null':
             self.frames = []
             self.pingRange = 0
             self.hitbox = []
         else:
-            with open('Sprites\\' + path, 'r') as file:
+            with open('Sprites' + control + self.path, 'r') as file:
                 lines = file.readlines()
                 lineCount = 0
                 self.frames = []
@@ -90,6 +104,8 @@ class Sprite:
         return self.scale
 
     def draw(self):
+        if self.invis:
+            return
         xRow = 0
         yRow = 0
         draw = True
@@ -119,16 +135,16 @@ class Sprite:
         self.draw()
 
 
-# noinspection PyRedeclaration
+
 class Text:
     global chars
     global blocks
-    global dict
+    global d
     global hitbox
     chars = []
     lineCount = 0
-    dict = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!|-$'
-    with open('Sprites\\charList.spr', 'r') as file:
+    d = 'abcdefghijklmnopqrstuvwxyz 1234567890.?!|-$'
+    with open('Sprites' + control + 'charList.spr', 'r') as file:
         lines = file.readlines()
         for line in lines:
             if lineCount == 0:
@@ -150,9 +166,9 @@ class Text:
             if i == '/':
                 yRow += 1
                 xRow = 0
-            elif dict.find(i) > -1:
+            elif d.find(i) > -1:
                 self.sprites.append(Sprite('null', x + (blocks * xRow * s), y + 2 * yRow * s + (blocks * yRow * s), c, -1, s, scr))
-                self.sprites[sprCount].manualSprite(blocks, hitbox, [chars[dict.find(i)]])
+                self.sprites[sprCount].manualSprite(blocks, hitbox, [chars[d.find(i)]])
                 xRow += 1
                 sprCount += 1
 
@@ -198,12 +214,13 @@ class Counter:
         self.number = x
         self.updateVal()
 
+
 class ColorSprite:
 
     def __init__(self, p, x, y, c, a, s, scr):
         self.sprites = []
         temp = []
-        p = 'Sprites\\' + p
+        p = 'Sprites' + control + p
         self.path = p
         for i in c:
             self.sprites.append(Sprite('null', x, y, i, a, s, scr))

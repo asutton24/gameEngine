@@ -155,8 +155,14 @@ class GameObject:
 
     def update(self, objs):
         if self.alive:
-            if self.iFrames > 0:
+            if self.iFrames > 0 and self.iMax < 50:
                 self.iFrames -= 1
+                if int(self.iFrames / 5) % 2 == 0:
+                    self.sprite.invis = True
+                else:
+                    self.sprite.invis = False
+            else:
+                self.sprite.invis = False
             if self.knockback[2] != 0:
                 xMove = self.knockback[0]
                 yMove = self.knockback[1]
@@ -227,15 +233,7 @@ class Player(GameObject):
     def takeInput(self, keys):
         currentFacing = self.facing
         currentMove = self.moving
-        if self.controller:
-            right = 0
-            left = 1
-            up = 2
-            down = 3
-            fire = 4
-            use = 5
-            change = 6
-        if not self.wasd:
+        if not self.wasd or self.controller:
             right = pygame.K_RIGHT
             left = pygame.K_LEFT
             up = pygame.K_UP
@@ -689,8 +687,6 @@ class Enemy(GameObject):
         self.projectiles = []
         self.tickClock = 0
         self.maxHP = health
-        if self.mType == 4:
-            im = 0
         if faceType == 1:
             self.sprites = spr
             self.facing = 0
