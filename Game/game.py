@@ -263,7 +263,7 @@ def settings(screen, current, fs):
 
 
 def home(screen, controls, high):
-    name = 'title'
+    name = 'one way out'
     score = Text('High score- {}'.format(high), 512 - len('High score- {}'.format(high)) * 16, 50, (255, 255, 255), 4, screen)
     title = Text(name, 512 - len(name) * 40, 150, (255, 255, 255), 10, screen)
     labels = ['play', 'settings', 'quit']
@@ -658,4 +658,5 @@ def run(screen, controls, cheats):
             pygame.display.update()
             clock.tick(60)
     return p1.score * 10 * (not forceQuit) * cheats + ret
+
 
